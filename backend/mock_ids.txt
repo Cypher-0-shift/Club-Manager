@@ -1,0 +1,2 @@
+president=d06561ad-3d88-4f47-a764-2d25d2be5b3c
+member=192af975-7bb3-48dd-9631-ed8ccc1a3344
