@@ -104,13 +104,27 @@ async def list_tasks(
     if project_id:
         query = query.eq("project_id", project_id)
     elif domain_id:
-        query = query.eq("domain_id", domain_id)
+        # If filtering by domain, we must find all projects in that domain 
+        # because the 'tasks' table is missing the 'domain_id' column
+        projects_res = sb.table("projects").select("id").eq("domain_id", domain_id).execute()
+        proj_ids = [p["id"] for p in (projects_res.data or [])]
+        if proj_ids:
+            query = query.in_("project_id", proj_ids)
+        else:
+            # No projects in domain, so no tasks (since we can't find standalone tasks without domain_id)
+            return []
 
     # ALWAYS apply member isolation regardless of other filters
     if current_user["role"] == "member":
         query = query.eq("assignee_id", current_user["id"])
     elif current_user["role"] == "lead" and not project_id and not domain_id:
-        query = query.eq("domain_id", current_user.get("domain_id"))
+        # Fallback for lead isolation: find projects in their domain
+        user_domain = current_user.get("domain_id")
+        if user_domain:
+            projects_res = sb.table("projects").select("id").eq("domain_id", user_domain).execute()
+            proj_ids = [p["id"] for p in (projects_res.data or [])]
+            if proj_ids:
+                query = query.in_("project_id", proj_ids)
 
     if status:
         query = query.eq("status", status)
@@ -148,6 +162,9 @@ async def create_task(
     payload["created_by"] = current_user["id"]
     if payload.get("deadline"):
         payload["deadline"] = payload["deadline"].isoformat()
+    
+    # REMOVE domain_id from payload because the DB table is missing the column
+    payload.pop("domain_id", None)
 
     result = sb.table("tasks").insert(payload).execute()
     if not result.data:
@@ -202,6 +219,9 @@ async def update_task(
     updates = body.model_dump(exclude_none=True)
     if "deadline" in updates and updates["deadline"]:
         updates["deadline"] = updates["deadline"].isoformat()
+    
+    # REMOVE domain_id from updates because the DB table is missing the column
+    updates.pop("domain_id", None)
 
     result = sb.table("tasks").update(updates).eq("id", task_id).execute()
 

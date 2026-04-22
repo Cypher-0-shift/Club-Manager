@@ -14,10 +14,11 @@ async def create_user(body: UserCreate):
     sb = get_supabase_admin()
     user_data = body.model_dump(exclude={"is_approved"}, exclude_none=True)
     
-    count_res = sb.table("users").select("id", count="exact").execute()
-    is_first_user = (count_res.count or 0) == 0
+    # Check if there's any approved president yet
+    pres_res = sb.table("users").select("id").eq("role", "president").eq("is_approved", True).execute()
+    has_president = len(pres_res.data) > 0
 
-    if is_first_user:
+    if not has_president:
         user_data["is_approved"] = True
         user_data["role"] = "president"
     else:

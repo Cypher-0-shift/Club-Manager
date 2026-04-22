@@ -14,7 +14,6 @@ import { useToast } from '@/components/ui/Toast';
 import { useRouter } from 'next/navigation';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
 import { TaskModal } from '@/components/tasks/TaskModal';
-import { TaskTable } from '@/components/tasks/TaskTable';
 
 interface Props {
   params: Promise<{ domainId: string }>;
@@ -330,28 +329,6 @@ export default function DomainWorkspacePage({ params }: Props) {
           }
         </div>
 
-        {/* Task Master List - Robust Table */}
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '24px', borderBottom: '1px solid var(--color-border-subtle)', paddingBottom: '12px' }}>
-            <List size={20} color="var(--color-text-muted)" />
-            <h2 className="section-title" style={{ marginBottom: 0 }}>Task Master List</h2>
-          </div>
-          
-          {tasksLoading ? (
-            <SkeletonCard />
-          ) : (
-            <TaskTable 
-              tasks={tasks} 
-              onTaskClick={setSelectedTask} 
-            />
-          )}
-
-          {!tasksLoading && tasks.length === 0 && (
-             <div style={{ padding: '64px', textAlign: 'center', color: 'var(--color-text-muted)', background: 'rgba(255,255,255,0.01)', borderRadius: '12px', border: '1px dashed var(--color-border)' }}>
-                No tasks found in this domain.
-             </div>
-          )}
-        </div>
       </div>
 
       <style jsx>{`
@@ -380,6 +357,7 @@ export default function DomainWorkspacePage({ params }: Props) {
 
       {showCreateTask && (
         <CreateTaskModal 
+          domainId={domainId}
           defaultStatus="pending" 
           onClose={() => setShowCreateTask(false)} 
           onSuccess={() => { setShowCreateTask(false); qc.invalidateQueries({ queryKey: ['tasks', domainId] }); }} 

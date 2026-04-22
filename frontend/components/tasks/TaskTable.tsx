@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react';
 import { Task, TaskPriority, TaskStatus, PRIORITY_COLORS, STATUS_LABELS } from '@/types';
 import { format } from 'date-fns';
 import { Search, Filter, ArrowUpDown, ChevronDown, CheckCircle2, Circle, Clock, AlertCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
 
 interface TaskTableProps {
   tasks: Task[];
@@ -19,13 +21,24 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
   const [sortField, setSortField] = useState<SortField>('deadline');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const { data: allDomains = [] } = useQuery<any[]>({
+    queryKey: ['domains'],
+    queryFn: () => api.get('/domains').then(r => r.data),
+  });
+
+  const domainColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allDomains.forEach(d => { map[d.id] = d.color_hex; });
+    return map;
+  }, [allDomains]);
+
   const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 };
   const statusWeight = { overdue: 4, in_progress: 3, pending: 2, completed: 1 };
 
   const filteredTasks = useMemo(() => {
     return tasks.filter(t => {
-      const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
-                           (t.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
+      const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
+        (t.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
       const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
       return matchesSearch && matchesStatus && matchesPriority;
@@ -61,12 +74,12 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      
+
       {/* Filters Toolbar */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '12px', 
-        alignItems: 'center', 
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        alignItems: 'center',
         flexWrap: 'wrap',
         background: 'rgba(255,255,255,0.02)',
         padding: '12px',
@@ -75,9 +88,9 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
       }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-          <input 
-            className="form-input" 
-            placeholder="Search tasks..." 
+          <input
+            className="form-input"
+            placeholder="Search tasks..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             style={{ paddingLeft: '36px' }}
@@ -85,26 +98,26 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
         </div>
 
         <div style={{ display: 'flex', gap: '8px' }}>
-          <select 
-            className="form-input" 
-            value={statusFilter} 
+          <select
+            className="form-input"
+            value={statusFilter}
             onChange={e => setStatusFilter(e.target.value as any)}
             style={{ width: 'auto', fontSize: '13px' }}
           >
-            <option value="all">All Statuses</option>
+            <option value="all">Status</option>
             <option value="pending">Pending</option>
             <option value="in_progress">In Progress</option>
             <option value="completed">Completed</option>
             <option value="overdue">Overdue</option>
           </select>
 
-          <select 
-            className="form-input" 
-            value={priorityFilter} 
+          <select
+            className="form-input"
+            value={priorityFilter}
             onChange={e => setPriorityFilter(e.target.value as any)}
             style={{ width: 'auto', fontSize: '13px' }}
           >
-            <option value="all">All Priorities</option>
+            <option value="all">Priority</option>
             <option value="low">Low</option>
             <option value="medium">Medium</option>
             <option value="high">High</option>
@@ -123,7 +136,7 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
             <thead style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--color-border-subtle)' }}>
               <tr>
-                <th 
+                <th
                   onClick={() => handleSort('title')}
                   style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 >
@@ -131,7 +144,7 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
                     Task {sortField === 'title' && <ArrowUpDown size={12} />}
                   </div>
                 </th>
-                <th 
+                <th
                   onClick={() => handleSort('assignee')}
                   style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 >
@@ -139,7 +152,7 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
                     Assignee {sortField === 'assignee' && <ArrowUpDown size={12} />}
                   </div>
                 </th>
-                <th 
+                <th
                   onClick={() => handleSort('status')}
                   style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 >
@@ -147,7 +160,7 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
                     Status {sortField === 'status' && <ArrowUpDown size={12} />}
                   </div>
                 </th>
-                <th 
+                <th
                   onClick={() => handleSort('priority')}
                   style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 >
@@ -155,7 +168,7 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
                     Priority {sortField === 'priority' && <ArrowUpDown size={12} />}
                   </div>
                 </th>
-                <th 
+                <th
                   onClick={() => handleSort('deadline')}
                   style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--color-text-muted)', cursor: 'pointer' }}
                 >
@@ -167,8 +180,8 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
             </thead>
             <tbody>
               {filteredTasks.map(t => (
-                <tr 
-                  key={t.id} 
+                <tr
+                  key={t.id}
                   onClick={() => onTaskClick(t)}
                   style={{ borderBottom: '1px solid var(--color-border-subtle)', cursor: 'pointer', transition: 'background 0.2s' }}
                   className="table-row-hover"
@@ -180,7 +193,19 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
                   <td style={{ padding: '14px 16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <div className="avatar avatar-xs" style={{ fontSize: '10px' }}>{(t.assignee?.full_name ?? 'U')[0]}</div>
-                      <span>{t.assignee?.full_name ?? 'Unassigned'}</span>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ 
+                          fontWeight: 500, 
+                          color: t.assignee ? (domainColorMap[t.assignee.domain_id || ''] || 'inherit') : 'inherit' 
+                        }}>
+                          {t.assignee?.full_name ?? 'Unassigned'}
+                        </span>
+                        {t.assignee && (
+                          <span style={{ fontSize: '10px', color: 'var(--color-text-muted)', textTransform: 'capitalize' }}>
+                            {t.assignee.role}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </td>
                   <td style={{ padding: '14px 16px' }}>

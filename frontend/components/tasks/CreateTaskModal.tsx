@@ -1,6 +1,4 @@
-'use client';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,8 +6,8 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
-import { TaskPriority, TaskStatus, Project, User } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { TaskPriority, TaskStatus, Project, User, Domain } from '@/types';
+import { Loader2, Search, ChevronDown, Check, User as UserIcon } from 'lucide-react';
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
 
@@ -26,31 +24,49 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 interface CreateTaskModalProps {
+  domainId?: string; // Optional: use the provided domainId or fallback to store
   defaultStatus: TaskStatus;
   onClose: () => void;
   onSuccess: () => void;
-  forcedProjectId?: string; // Optional: force a specific project
+  forcedProjectId?: string;
 }
 
-export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProjectId }: CreateTaskModalProps) {
-  const { user, domainId } = useAppStore();
+export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose, onSuccess, forcedProjectId }: CreateTaskModalProps) {
+  const { user, domainId: storeDomainId } = useAppStore();
+  const domainId = propDomainId || storeDomainId;
   const { toast } = useToast();
   const [charCount, setCharCount] = useState(0);
+  const [allocateTime, setAllocateTime] = useState(false);
+  
+  const [assigneeSearch, setAssigneeSearch] = useState('');
+  const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['projects', domainId],
     queryFn: () => api.get(domainId ? `/projects?domain_id=${domainId}` : '/projects').then(r => r.data),
-    enabled: !!domainId,
+    enabled: !!user,
   });
 
   const { data: members = [] } = useQuery<User[]>({
     queryKey: ['members', domainId],
     queryFn: () => api.get(domainId ? `/users?domain_id=${domainId}` : '/users').then(r => r.data),
-    enabled: !!domainId,
+    enabled: !!user,
   });
 
+  const { data: allDomains = [] } = useQuery<Domain[]>({
+    queryKey: ['domains'],
+    queryFn: () => api.get('/domains').then(r => r.data),
+  });
+
+  const domainColorMap = useMemo(() => {
+    const map: Record<string, string> = {};
+    allDomains.forEach(d => { map[d.id] = d.color_hex; });
+    return map;
+  }, [allDomains]);
+
   const {
-    register, handleSubmit, watch, control, formState: { errors, isValid },
+    register, handleSubmit, watch, control, setValue, formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { 
@@ -62,14 +78,26 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
   });
 
   const title = watch('title');
+  const selectedAssigneeId = watch('assignee_id');
+  
   useEffect(() => setCharCount(title?.length ?? 0), [title]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowAssigneeDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const mutation = useMutation({
     mutationFn: (data: FormData) => {
       const { deadlineDate, deadlineTime, ...rest } = data;
       let deadline = null;
       if (deadlineDate) {
-        const time = deadlineTime || '23:59';
+        const time = allocateTime ? (deadlineTime || '11:59') : '23:59';
         deadline = `${deadlineDate}T${time}:00`;
       }
       
@@ -78,7 +106,7 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
         deadline,
         status: defaultStatus, 
         created_by: user?.id,
-        project_id: data.project_id || null // Ensure null if empty
+        project_id: data.project_id || null
       });
     },
     onSuccess: () => {
@@ -89,6 +117,15 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
   });
 
   const today = new Date().toISOString().slice(0, 10);
+
+  const filteredMembers = useMemo(() => {
+    return members.filter(m => 
+      m.full_name.toLowerCase().includes(assigneeSearch.toLowerCase()) ||
+      m.role.toLowerCase().includes(assigneeSearch.toLowerCase())
+    );
+  }, [members, assigneeSearch]);
+
+  const selectedAssignee = members.find(m => m.id === selectedAssigneeId);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -165,7 +202,19 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
 
           {/* Deadline */}
           <div className="form-group">
-            <label className="form-label">Deadline</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label className="form-label" style={{ marginBottom: 0 }}>Deadline</label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input 
+                  type="checkbox" 
+                  id="allocate-time" 
+                  checked={allocateTime} 
+                  onChange={e => setAllocateTime(e.target.checked)}
+                  style={{ cursor: 'pointer' }}
+                />
+                <label htmlFor="allocate-time" style={{ fontSize: '12px', color: 'var(--color-text-secondary)', cursor: 'pointer' }}>Allocate Time</label>
+              </div>
+            </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <div style={{ flex: 1 }}>
                 <input
@@ -176,17 +225,20 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
                   style={{ width: '100%' }}
                 />
               </div>
-              <div style={{ flex: 1 }}>
-                <input
-                  {...register('deadlineTime')}
-                  type="time"
-                  className="form-input"
-                  style={{ width: '100%' }}
-                />
-              </div>
+              {allocateTime && (
+                <div style={{ flex: 1 }}>
+                  <input
+                    {...register('deadlineTime')}
+                    type="time"
+                    className="form-input"
+                    style={{ width: '100%' }}
+                    defaultValue="11:59"
+                  />
+                </div>
+              )}
             </div>
-            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
-              If time is omitted, it defaults to 23:59.
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+              {allocateTime ? 'Time is explicitly allocated.' : 'Defaults to 23:59 (end of day) if time is not allocated.'}
             </span>
           </div>
 
@@ -211,24 +263,83 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
             />
           </div>
 
-          {/* Assignee */}
-          <div className="form-group">
+          {/* Assignee - Searchable Dropdown */}
+          <div className="form-group" style={{ position: 'relative' }} ref={dropdownRef}>
             <label className="form-label">Assignee</label>
-            <Controller
-              name="assignee_id"
-              control={control}
-              render={({ field }) => (
-                <select 
-                  {...field} 
-                  value={field.value || ''} 
-                  onChange={e => field.onChange(e.target.value || null)}
-                  className="form-input"
-                >
-                  <option value="">Unassigned</option>
-                  {members.map(m => <option key={m.id} value={m.id}>{m.full_name} ({m.role})</option>)}
-                </select>
+            <div 
+              className="form-input" 
+              onClick={() => setShowAssigneeDropdown(!showAssigneeDropdown)}
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+            >
+              {selectedAssignee ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div className="avatar avatar-xs" style={{ fontSize: '10px' }}>{selectedAssignee.full_name[0]}</div>
+                  <span style={{ color: domainColorMap[selectedAssignee.domain_id || ''] || 'inherit', fontWeight: 500 }}>
+                    {selectedAssignee.full_name}
+                  </span>
+                  <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>({selectedAssignee.role})</span>
+                </div>
+              ) : (
+                <span style={{ color: 'var(--color-text-muted)' }}>Unassigned</span>
               )}
-            />
+              <ChevronDown size={14} />
+            </div>
+
+            {showAssigneeDropdown && (
+              <div className="card glass-subtle" style={{ 
+                position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
+                marginTop: '4px', padding: '8px', maxHeight: '240px', overflowY: 'auto',
+                display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
+              }}>
+                <div style={{ position: 'relative', marginBottom: '8px' }}>
+                  <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
+                  <input 
+                    className="form-input" 
+                    placeholder="Search members..." 
+                    value={assigneeSearch}
+                    onChange={e => setAssigneeSearch(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    autoFocus
+                    style={{ paddingLeft: '32px', height: '32px', fontSize: '13px' }}
+                  />
+                </div>
+
+                <div 
+                  className="dropdown-item" 
+                  onClick={() => { setValue('assignee_id', null); setShowAssigneeDropdown(false); }}
+                  style={{ padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <span style={{ fontSize: '13px' }}>Unassigned</span>
+                  {!selectedAssigneeId && <Check size={14} color="var(--color-brand)" />}
+                </div>
+
+                {filteredMembers.map(m => (
+                  <div 
+                    key={m.id}
+                    className="dropdown-item"
+                    onClick={() => { setValue('assignee_id', m.id); setShowAssigneeDropdown(false); }}
+                    style={{ padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div className="avatar avatar-xs" style={{ fontSize: '10px' }}>{m.full_name[0]}</div>
+                      <div style={{ display: 'flex', flexDirection: 'column' }}>
+                        <span style={{ fontSize: '13px', fontWeight: 500, color: domainColorMap[m.domain_id || ''] || 'inherit' }}>
+                          {m.full_name}
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'capitalize' }}>{m.role}</span>
+                      </div>
+                    </div>
+                    {selectedAssigneeId === m.id && <Check size={14} color="var(--color-brand)" />}
+                  </div>
+                ))}
+
+                {filteredMembers.length === 0 && (
+                  <div style={{ padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                    No members found
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
@@ -243,6 +354,12 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProje
             </button>
           </div>
         </form>
+
+        <style jsx>{`
+          .dropdown-item:hover {
+            background: rgba(255,255,255,0.05);
+          }
+        `}</style>
       </div>
     </div>
   );

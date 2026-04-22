@@ -91,7 +91,7 @@ export default function SignupPage() {
       if (res.data.is_approved) {
         setUser(res.data);
         router.push('/dashboard');
-        toast('President account created successfully!', 'success');
+        toast('Account created successfully!', 'success');
       } else {
         router.push('/pending-approval');
       }

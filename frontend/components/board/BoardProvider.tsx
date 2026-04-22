@@ -27,12 +27,10 @@ import { KanbanColumn } from './KanbanColumn';
 import { TaskCard } from './TaskCard';
 import { TaskModal } from '../tasks/TaskModal';
 import { CreateTaskModal } from '../tasks/CreateTaskModal';
-import { TaskTable } from '../tasks/TaskTable';
 import { LEAD_AND_ABOVE } from '@/types';
 import { StatsRow } from '../dashboard/StatCard';
-import { LayoutGrid, List as ListIcon } from 'lucide-react';
 
-export function BoardProvider() {
+export function BoardProvider({ domainId }: { domainId?: string }) {
   const { user, role } = useAppStore();
   const searchParams = useSearchParams();
   const projectId = searchParams.get('project_id');
@@ -42,7 +40,6 @@ export function BoardProvider() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [showCreateModal, setShowCreateModal] = useState<TaskStatus | null>(null);
-  const [viewMode, setViewMode] = useState<'kanban' | 'table'>(projectId ? 'table' : 'kanban');
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -115,63 +112,41 @@ export function BoardProvider() {
             </div>
           )}
         </div>
-
-        {/* View Toggle */}
-        <div className="priority-toggle" style={{ padding: '2px', width: 'auto' }}>
-          <button 
-            className={`priority-toggle-btn ${viewMode === 'kanban' ? 'active-medium' : ''}`}
-            onClick={() => setViewMode('kanban')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
-          >
-            <LayoutGrid size={14} /> Board
-          </button>
-          <button 
-            className={`priority-toggle-btn ${viewMode === 'table' ? 'active-medium' : ''}`}
-            onClick={() => setViewMode('table')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px' }}
-          >
-            <ListIcon size={14} /> Table
-          </button>
-        </div>
       </div>
 
-      {viewMode === 'kanban' ? (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-        >
-          <div style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '16px', 
-            flex: 1,
-            alignItems: 'start'
-          }}>
-            {columns.map(status => (
-              <KanbanColumn
-                key={status}
-                status={status}
-                tasks={tasks.filter(t => t.status === status)}
-                onTaskClick={setSelectedTask}
-                onAddTask={() => setShowCreateModal(status)}
-                canAdd={canCreate && status !== 'overdue'}
-              />
-            ))}
-          </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: 'repeat(4, 1fr)', 
+          gap: '16px', 
+          flex: 1,
+          alignItems: 'start'
+        }}>
+          {columns.map(status => (
+            <KanbanColumn
+              key={status}
+              status={status}
+              tasks={tasks.filter(t => t.status === status)}
+              onTaskClick={setSelectedTask}
+              onAddTask={() => setShowCreateModal(status)}
+              canAdd={canCreate && status !== 'overdue'}
+            />
+          ))}
+        </div>
 
-          <DragOverlay dropAnimation={{
-            sideEffects: defaultDropAnimationSideEffects({
-              styles: { active: { opacity: '0.5' } }
-            })
-          }}>
-            {activeTask ? <TaskCard task={activeTask} /> : null}
-          </DragOverlay>
-        </DndContext>
-      ) : (
-        <TaskTable tasks={tasks} onTaskClick={setSelectedTask} />
-      )}
+        <DragOverlay dropAnimation={{
+          sideEffects: defaultDropAnimationSideEffects({
+            styles: { active: { opacity: '0.5' } }
+          })
+        }}>
+          {activeTask ? <TaskCard task={activeTask} /> : null}
+        </DragOverlay>
+      </DndContext>
 
       {selectedTask && (
         <TaskModal 
@@ -186,8 +161,9 @@ export function BoardProvider() {
 
       {showCreateModal && projectId && (
         <CreateTaskModal
-          projectId={projectId}
-          initialStatus={showCreateModal}
+          domainId={domainId}
+          forcedProjectId={projectId}
+          defaultStatus={showCreateModal}
           onClose={() => setShowCreateModal(null)}
           onSuccess={() => {
             setShowCreateModal(null);

@@ -75,7 +75,7 @@ export default function BoardPage() {
           </div>
         </div>
 
-        <BoardProvider />
+        <BoardProvider domainId={project?.domain_id} />
       </div>
     </AppShell>
   );
