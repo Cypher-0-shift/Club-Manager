@@ -1,12 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.dependencies.auth import get_current_user
 from app.core.supabase import get_supabase_admin
-from app.schemas.schemas import UserUpdate, UserOut
+from app.schemas.schemas import UserUpdate, UserOut, UserCreate
 from typing import Optional
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 EXEC_ROLES = ("president", "vp", "secretary")
+
+
+@router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
+async def create_user(body: UserCreate):
+    sb = get_supabase_admin()
+    user_data = body.model_dump(exclude_none=True)
+    
+    first_user_check = sb.table("users").select("id").limit(1).execute()
+    is_first_user = len(first_user_check.data) == 0
+
+    if is_first_user:
+        user_data["is_approved"] = True
+        user_data["role"] = "president"
+    else:
+        user_data["is_approved"] = False
+    
+    result = sb.table("users").insert(user_data).execute()
+    if not result.data:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create user profile")
+    return result.data[0]
 
 
 @router.get("/", response_model=list[UserOut])

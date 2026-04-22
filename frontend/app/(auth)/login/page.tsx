@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -70,7 +71,21 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
+        style={{ position: 'relative' }}
       >
+        <button
+          onClick={() => router.push('/')}
+          className="btn-icon btn-ghost"
+          style={{
+            position: 'absolute', top: '16px', right: '16px',
+            color: 'var(--color-text-muted)',
+            padding: '4px',
+          }}
+          title="Back to home"
+          type="button"
+        >
+          <X size={20} />
+        </button>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{
@@ -139,7 +154,7 @@ export default function LoginPage() {
         <p style={{ marginTop: '20px', textAlign: 'center', fontSize: '13px', color: 'var(--color-text-muted)' }}>
           New member?{' '}
           <a href="/signup" style={{ color: 'var(--color-brand)', fontWeight: 500 }}>
-            Request access
+            Sign Up
           </a>
         </p>
       </motion.div>

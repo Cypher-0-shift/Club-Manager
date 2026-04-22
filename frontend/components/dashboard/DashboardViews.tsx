@@ -5,9 +5,11 @@ import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
 import { User } from '@/types';
-import { StatsRow, SkeletonCard } from '@/components/dashboard/StatCard';
+import { StatsRow, StatCard, SkeletonCard } from '@/components/dashboard/StatCard';
 import { DomainCardGrid } from '@/components/dashboard/DomainCard';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { CheckCircle2, Search, ArrowRight } from 'lucide-react';
 
 export function DashboardPresident() {
   const { user } = useAppStore();
@@ -40,78 +42,44 @@ export function DashboardPresident() {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      
+      {/* Analytics Strip Top */}
+      <div>
+        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>Executive Overview</h1>
+        {tasksLoading
+          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+          : <StatsRow tasks={tasks} />
+        }
+      </div>
+
       {/* Pending approvals banner */}
       {!dismissedBanner && pendingUsers.length > 0 && (
-        <div style={{
-          background: 'rgba(245,158,11,0.1)',
-          border: '1px solid rgba(245,158,11,0.3)',
+        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} style={{
+          background: 'rgba(217, 119, 6, 0.1)',
+          border: '1px solid rgba(217, 119, 6, 0.3)',
           borderRadius: 'var(--radius-md)',
-          padding: '12px 16px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
+          padding: '16px 20px',
+          display: 'flex', alignItems: 'center', gap: '16px',
         }}>
-          <span style={{ fontSize: '13px', flex: 1, color: 'var(--color-pending)' }}>
+          <span style={{ fontSize: '14px', flex: 1, color: 'var(--color-pending)', fontWeight: 500 }}>
             ⚠ {pendingUsers.length} member{pendingUsers.length > 1 ? 's' : ''} awaiting approval
           </span>
-          <button className="btn btn-sm" style={{
-            background: 'rgba(245,158,11,0.2)', color: '#fbbf24', border: 'none',
-          }} onClick={() => window.location.href = '/users'}>
-            Review
+          <button className="btn btn-sm btn-primary" onClick={() => window.location.href = '/users'}>
+            Review Now
           </button>
-          <button onClick={() => setDismissedBanner(true)} style={{ color: 'var(--color-text-muted)', fontSize: '16px' }}>×</button>
-        </div>
+          <button onClick={() => setDismissedBanner(true)} style={{ color: 'var(--color-text-muted)', fontSize: '18px' }}>×</button>
+        </motion.div>
       )}
 
-      {/* Stats */}
-      {tasksLoading
-        ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>
-            {[0,1,2,3].map(i => <SkeletonCard key={i} />)}
-          </div>
-        : <StatsRow tasks={tasks} />
-      }
-
-      {/* Pending approvals quick list */}
-      {pendingUsers.length > 0 && (
-        <div>
-          <h2 className="section-title" style={{ marginBottom: '12px' }}>Pending Approvals</h2>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {pendingUsers.slice(0, 5).map(u => (
-              <div key={u.id} style={{
-                display: 'flex', alignItems: 'center', gap: '12px',
-                padding: '10px 14px',
-                background: 'var(--color-surface)',
-                border: '1px solid var(--color-border-subtle)',
-                borderRadius: 'var(--radius-sm)',
-              }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 500 }}>{u.full_name}</div>
-                  <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{u.email} · {u.role}</div>
-                </div>
-                <button
-                  className="btn btn-sm btn-primary"
-                  onClick={() => approveMutation.mutate(u.id)}
-                  disabled={approveMutation.isPending}
-                >
-                  Approve
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Domains */}
+      {/* Domains Map */}
       <div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-          <h2 className="section-title">Domains</h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+          <h2 className="section-title">Active Domains</h2>
           <a href="/workspace/new" className="btn btn-sm btn-primary">+ New Domain</a>
         </div>
         {domainsLoading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>
-              {[0,1,2].map(i => <SkeletonCard key={i} />)}
-            </div>
+          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>{[0,1,2].map(i => <SkeletonCard key={i} />)}</div>
           : domains.length > 0
             ? <DomainCardGrid domains={domains} />
             : <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '32px' }}>
@@ -119,7 +87,7 @@ export function DashboardPresident() {
               </div>
         }
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -142,59 +110,58 @@ export function DashboardMember() {
     .slice(0, 5);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      
       {/* Welcome */}
       <div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>
-          Welcome, {user?.full_name.split(' ')[0]} 👋
+        <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px' }}>
+          Hello, {user?.full_name.split(' ')[0]} 👋
         </h1>
-        <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
-          {user?.role}
+        <p style={{ fontSize: '15px', color: 'var(--color-text-muted)' }}>
+          {myTasks.filter(t => t.status !== 'completed').length} active tasks on your plate
         </p>
       </div>
 
-      {/* Personal stats */}
-      {isLoading
-        ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>
-            {[0,1,2].map(i => <SkeletonCard key={i} />)}
-          </div>
-        : <StatsRow tasks={myTasks} />
-      }
-
-      {/* Urgent tasks */}
+      {/* Urgent tasks priority section */}
       <div>
-        <h2 className="section-title" style={{ marginBottom: '12px' }}>Urgent Tasks</h2>
-        {urgent.length === 0
-          ? <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '24px' }}>
-              🎉 No urgent tasks right now
-            </div>
-          : <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {urgent.map(t => (
-                <a key={t.id} href="/board" style={{ textDecoration: 'none' }}>
-                  <div className={`task-card ${t.is_overdue ? 'task-card-overdue' : ''}`}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span className={`priority-dot priority-dot-${t.priority}`} />
-                      <span className="task-card-title">{t.title}</span>
+        <h2 className="section-title" style={{ marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 size={18} color="var(--color-brand)" /> Your tasks today
+        </h2>
+        {isLoading 
+          ? <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>{[0,1].map(i => <SkeletonCard key={i} />)}</div>
+          : urgent.length === 0
+            ? <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px', border: '2px dashed var(--color-border)' }}>
+                🎉 You're all caught up! No urgent tasks.
+              </div>
+            : <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {urgent.map((t, idx) => (
+                  <motion.a 
+                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }}
+                    key={t.id} href="/board" style={{ textDecoration: 'none' }}
+                  >
+                    <div className={`task-card ${t.is_overdue ? 'task-card-overdue' : ''}`} style={{ borderLeft: `3px solid var(--color-${t.priority})`}}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span className="task-card-title">{t.title}</span>
+                      </div>
+                      <div className="task-card-footer">
+                        <span className="task-card-due" style={{ color: t.is_overdue ? 'var(--color-overdue)' : undefined}}>
+                          {t.deadline ? `Due ${new Date(t.deadline).toLocaleDateString()}` : 'No deadline'}
+                        </span>
+                        <span className={`badge badge-${t.status}`}>{t.status.replace('_', ' ')}</span>
+                      </div>
                     </div>
-                    <div className="task-card-footer">
-                      <span className="task-card-due">
-                        {t.deadline ? `Due ${new Date(t.deadline).toLocaleDateString()}` : 'No deadline'}
-                      </span>
-                      <span className={`badge badge-${t.status}`}>{t.status.replace('_', ' ')}</span>
-                    </div>
-                  </div>
-                </a>
-              ))}
-            </div>
+                  </motion.a>
+                ))}
+              </div>
         }
       </div>
 
       <div>
         <a href="/board" className="btn btn-primary">
-          Open My Board →
+          Enter Workspace <ArrowRight size={16} />
         </a>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

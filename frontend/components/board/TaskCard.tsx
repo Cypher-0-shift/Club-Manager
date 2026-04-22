@@ -3,7 +3,9 @@
 import { Task, TaskPriority, TaskStatus, PRIORITY_COLORS } from '@/types';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { format, isPast } from 'date-fns';
+import { format, isPast, isBefore, addDays } from 'date-fns';
+import { motion } from 'framer-motion';
+import { MessageSquare, Paperclip, Pin } from 'lucide-react';
 
 interface TaskCardProps {
   task: Task;
@@ -21,46 +23,50 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
     transition,
   };
 
-  const isDeadlineSoon = task.deadline && !task.is_overdue && isPast(new Date(task.deadline));
-  const deadlineStr = task.deadline ? format(new Date(task.deadline), 'MMM d, yyyy') : null;
+  const isDeadlineSoon = task.deadline && !task.is_overdue && isBefore(new Date(task.deadline), addDays(new Date(), 1));
+  const deadlineStr = task.deadline ? format(new Date(task.deadline), 'MMM d') : null;
 
   // Avatar color from id
   const avatarColor = task.assignee_id
-    ? ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444'][task.assignee_id.charCodeAt(0) % 6]
+    ? ['#6366F1','#8B5CF6','#06B6D4','#10B981','#F59E0B','#EF4444'][task.assignee_id.charCodeAt(0) % 6]
     : 'var(--color-surface-hover)';
 
+  // Priority color mapping for top border
+  const priorityBorderMap: Record<string, string> = {
+    low: 'var(--color-low)',
+    medium: 'var(--color-medium)',
+    high: 'var(--color-high)',
+    critical: 'var(--color-critical)'
+  };
+  
+  const borderTopColor = priorityBorderMap[task.priority] || 'transparent';
+
   return (
-    <div
+    <motion.div
       ref={setNodeRef}
-      style={style}
+      initial={task.is_overdue ? { x: [-4, 4, -4, 4, 0] } : false}
+      transition={{ duration: 0.4 }}
+      style={{
+        ...style,
+        borderTop: `3px solid ${borderTopColor}`,
+        ...(isDeadlineSoon ? { boxShadow: '0 0 12px rgba(220, 38, 38, 0.3)', borderColor: 'rgba(220, 38, 38, 0.4)' } : {})
+      }}
       {...attributes}
       {...listeners}
-      className={[
-        'task-card',
-        task.is_overdue ? 'task-card-overdue' : '',
-        isDragging ? 'task-card-dragging' : '',
-      ].join(' ')}
-      onClick={(e) => {
-        // Don't open if we were dragging
-        if (!isDragging) onClick();
-      }}
+      className={['task-card', task.is_overdue ? 'task-card-overdue' : '', isDragging ? 'task-card-dragging' : ''].join(' ')}
+      onClick={() => { if (!isDragging) onClick(); }}
+      whileHover={{ y: -2, zIndex: 10 }}
     >
       {/* Pin icon */}
       {task.is_pinned && (
-        <span style={{
-          position: 'absolute', top: '8px', right: '8px',
-          fontSize: '11px', opacity: 0.6
-        }}>📌</span>
+        <span style={{ position: 'absolute', top: '8px', right: '8px', opacity: 0.5, color: 'var(--color-brand)' }}>
+          <Pin size={12} fill="currentColor" />
+        </span>
       )}
 
       {/* Title row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', marginBottom: '4px' }}>
-        <span
-          className={`priority-dot priority-dot-${task.priority}`}
-          style={{ marginTop: '4px' }}
-          title={`Priority: ${task.priority}`}
-        />
-        <span className="task-card-title" style={{ flex: 1 }}>{task.title}</span>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '7px', marginBottom: '6px' }}>
+        <span className="task-card-title" style={{ flex: 1, paddingRight: task.is_pinned ? '14px' : '0' }}>{task.title}</span>
       </div>
 
       {/* Project */}
@@ -91,10 +97,10 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
         {/* Meta counts */}
         <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
-          {(task.message_count ?? 0) > 0 && <span>💬 {task.message_count}</span>}
-          {(task.submission_count ?? 0) > 0 && <span>📎 {task.submission_count}</span>}
+          {(task.message_count ?? 0) > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><MessageSquare size={12} /> {task.message_count}</span>}
+          {(task.submission_count ?? 0) > 0 && <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}><Paperclip size={12} /> {task.submission_count}</span>}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

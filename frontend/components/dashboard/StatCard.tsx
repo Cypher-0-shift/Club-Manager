@@ -2,6 +2,8 @@
 
 import { Task, TaskStatus } from '@/types';
 
+import { CountUp } from '@/components/ui/CountUp';
+
 interface StatCardProps {
   label: string;
   value: number | string;
@@ -13,7 +15,9 @@ export function StatCard({ label, value, sub, accent }: StatCardProps) {
   return (
     <div className="stat-card">
       <span className="stat-label">{label}</span>
-      <span className="stat-value" style={accent ? { color: accent } : undefined}>{value}</span>
+      <span className="stat-value" style={accent ? { color: accent } : undefined}>
+        {typeof value === 'number' ? <CountUp to={value} /> : value}
+      </span>
       {sub && <span className="stat-sub">{sub}</span>}
     </div>
   );

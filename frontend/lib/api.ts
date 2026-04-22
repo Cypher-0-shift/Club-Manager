@@ -6,19 +6,15 @@ export const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// In demo mode, we bypass Supabase and send the mock user ID directly
+// Intercept requests and attach the Supabase JWT
 api.interceptors.request.use(async (config) => {
   try {
-    // Zustand persists store as JSON in localStorage['app-storage']
-    const stored = localStorage.getItem('app-storage');
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed?.state?.user?.id) {
-        config.headers['X-Mock-User'] = parsed.state.user.id;
-      }
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.access_token) {
+      config.headers.Authorization = `Bearer ${session.access_token}`;
     }
   } catch (e) {
-    // ignore
+    // silently fail
   }
   return config;
 });
@@ -27,6 +23,11 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
+    if (err.response?.status === 401) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+    }
     const message =
       err.response?.data?.error?.message ||
       err.response?.data?.detail ||

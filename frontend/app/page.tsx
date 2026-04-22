@@ -2,27 +2,16 @@
 
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-import { MOCK_ADMIN, MOCK_MEMBER } from '@/lib/mockUsers';
 import { useEffect } from 'react';
 
 export default function LandingPage() {
   const router = useRouter();
-  const { setUser, role } = useAppStore();
+  const { role } = useAppStore();
 
-  // If already chose a role, redirect
+  // If already logged in, redirect
   useEffect(() => {
     if (role) router.push('/dashboard');
-  }, [role]);
-
-  function enterAdmin() {
-    setUser(MOCK_ADMIN);
-    router.push('/dashboard');
-  }
-
-  function enterMember() {
-    setUser(MOCK_MEMBER);
-    router.push('/dashboard');
-  }
+  }, [role, router]);
 
   return (
     <div style={{
@@ -132,7 +121,7 @@ export default function LandingPage() {
           {/* Admin Card */}
           <button
             id="enter-admin"
-            onClick={enterAdmin}
+            onClick={() => router.push('/login')}
             style={{
               background: 'rgba(22, 27, 39, 0.8)',
               border: '1px solid rgba(99,102,241,0.35)',
@@ -204,7 +193,7 @@ export default function LandingPage() {
           {/* Member Card */}
           <button
             id="enter-member"
-            onClick={enterMember}
+            onClick={() => router.push('/login')}
             style={{
               background: 'rgba(22, 27, 39, 0.8)',
               border: '1px solid rgba(34,197,94,0.25)',
@@ -302,10 +291,36 @@ export default function LandingPage() {
           ))}
         </div>
 
+        {/* First Time CTA */}
+        <div style={{
+          background: 'rgba(99,102,241,0.1)',
+          border: '1px solid rgba(99,102,241,0.3)',
+          borderRadius: '16px',
+          padding: '24px',
+          maxWidth: '800px',
+          width: '100%',
+          marginBottom: '48px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+        }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            Using it for the first time?
+          </h3>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', maxWidth: '400px' }}>
+            Set up the entire club hierarchy by creating a president account from scratch.
+          </p>
+          <a href="/signup?role=president" className="btn btn-primary">
+            Create a President Account
+          </a>
+        </div>
+
         {/* Footer */}
-        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-          Running in demo mode &nbsp;·&nbsp; Auth disabled &nbsp;·&nbsp;
-          <a href="/login" style={{ color: 'var(--color-brand)' }}>Sign in with real account</a>
+        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', display: 'flex', gap: '8px' }}>
+          <span>© 2026 Club Task Manager</span>
+          <span>·</span>
+          <a href="/login" style={{ color: 'var(--color-brand)' }}>Sign in to continue</a>
         </div>
       </main>
     </div>

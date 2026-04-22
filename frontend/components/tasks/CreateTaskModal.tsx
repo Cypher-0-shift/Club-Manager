@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
 import { TaskPriority, TaskStatus, Project, User } from '@/types';
+import { Loader2 } from 'lucide-react';
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
 const PRIORITY_COLORS: Record<TaskPriority, string> = {
@@ -194,8 +195,9 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
               type="submit"
               className="btn btn-primary"
               disabled={!isValid || mutation.isPending}
+              style={{ minWidth: '120px' }}
             >
-              {mutation.isPending ? 'Creating…' : 'Create Task'}
+              {mutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Create Task'}
             </button>
           </div>
         </form>

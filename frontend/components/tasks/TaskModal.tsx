@@ -8,6 +8,7 @@ import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
 import { format } from 'date-fns';
 import { LEAD_AND_ABOVE } from '@/types';
+import { Loader2 } from 'lucide-react';
 
 interface TaskModalProps {
   task: Task;
@@ -112,8 +113,9 @@ function MessageThread({ taskId }: { taskId: string }) {
           type="submit"
           className="btn btn-primary btn-sm"
           disabled={!input.trim() || sendMutation.isPending}
+          style={{ minWidth: '80px' }}
         >
-          Send
+          {sendMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Send'}
         </button>
       </form>
     </div>
@@ -193,8 +195,8 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
             )}
             {editing && (
               <>
-                <button className="btn btn-sm btn-primary" onClick={handleSaveEdit} disabled={updateMutation.isPending}>
-                  Save
+                <button className="btn btn-sm btn-primary" onClick={handleSaveEdit} disabled={updateMutation.isPending} style={{ minWidth: '80px' }}>
+                  {updateMutation.isPending ? <Loader2 className="animate-spin" size={14} /> : 'Save'}
                 </button>
                 <button className="btn btn-sm btn-secondary" onClick={() => setEditing(false)}>
                   Cancel

@@ -1,7 +1,22 @@
+import { X } from 'lucide-react';
+
 export default function PendingApprovalPage() {
   return (
     <div className="auth-bg">
-      <div className="auth-card" style={{ textAlign: 'center' }}>
+      <div className="auth-card" style={{ textAlign: 'center', position: 'relative' }}>
+        <a
+          href="/"
+          className="btn-icon btn-ghost"
+          style={{
+            position: 'absolute', top: '16px', right: '16px',
+            color: 'var(--color-text-muted)',
+            padding: '4px',
+            display: 'inline-flex',
+          }}
+          title="Back to home"
+        >
+          <X size={20} />
+        </a>
         <div style={{ fontSize: '40px', marginBottom: '16px' }}>⏳</div>
         <h1 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '8px' }}>Pending Approval</h1>
         <p style={{ fontSize: '14px', color: 'var(--color-text-muted)', lineHeight: 1.6 }}>

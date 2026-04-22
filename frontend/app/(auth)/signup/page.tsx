@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -10,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { useAppStore } from '@/lib/store';
 import { Domain, UserRole } from '@/types';
 
 const EXEC_ROLES: UserRole[] = ['president', 'vp', 'secretary'];
@@ -34,20 +36,32 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
 export default function SignupPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [isPresidentSetup, setIsPresidentSetup] = useState(false);
 
-  const { register, handleSubmit, watch, control, formState: { errors } } = useForm<FormData>({
+  const { register, handleSubmit, watch, control, formState: { errors }, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { role: 'member' },
   });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('role') === 'president') {
+        setIsPresidentSetup(true);
+        setValue('role', 'president');
+      }
+    }
+  }, [setValue]);
 
   const selectedRole = watch('role');
   const needsDomain = !EXEC_ROLES.includes(selectedRole as UserRole);
 
   const { data: domains = [] } = useQuery<Domain[]>({
     queryKey: ['domains-public'],
-    queryFn: () => api.get('/domains').then(r => r.data).catch(() => []),
+    queryFn: () => api.get('/domains/public').then(r => r.data).catch(() => []),
   });
 
   async function onSubmit(data: FormData) {
@@ -66,7 +80,7 @@ export default function SignupPage() {
       if (signUpError) throw signUpError;
 
       // 2) insert into public.users
-      const { error: insertErr } = await supabase.from('users').insert({
+      const res = await api.post('/users', {
         id: authData.user!.id,
         email: data.email,
         full_name: data.full_name,
@@ -74,9 +88,14 @@ export default function SignupPage() {
         domain_id: needsDomain ? data.domain_id ?? null : null,
         is_approved: false,
       });
-      if (insertErr) throw insertErr;
 
-      router.push('/pending-approval');
+      if (res.data.is_approved) {
+        setUser(res.data);
+        router.push('/dashboard');
+        toast('President account created successfully!', 'success');
+      } else {
+        router.push('/pending-approval');
+      }
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Signup failed', 'error');
     } finally {
@@ -91,8 +110,21 @@ export default function SignupPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        style={{ maxWidth: '400px' }}
+        style={{ maxWidth: '400px', position: 'relative' }}
       >
+        <button
+          onClick={() => router.push('/')}
+          className="btn-icon btn-ghost"
+          style={{
+            position: 'absolute', top: '16px', right: '16px',
+            color: 'var(--color-text-muted)',
+            padding: '4px',
+          }}
+          title="Back to home"
+          type="button"
+        >
+          <X size={20} />
+        </button>
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{
             width: '44px', height: '44px',
@@ -102,9 +134,11 @@ export default function SignupPage() {
             fontSize: '20px', fontWeight: 700, color: '#fff',
             margin: '0 auto 12px',
           }}>C</div>
-          <h1 style={{ fontSize: '20px', fontWeight: 700 }}>Request Access</h1>
+          <h1 style={{ fontSize: '20px', fontWeight: 700 }}>
+            {isPresidentSetup ? 'Create President Account' : 'Request Access'}
+          </h1>
           <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-            Your account will be reviewed by a club officer
+            {isPresidentSetup ? 'Set up your club space' : 'Your account will be reviewed by a club officer'}
           </p>
         </div>
 
@@ -142,21 +176,23 @@ export default function SignupPage() {
             {errors.password && <span className="form-error">{errors.password.message}</span>}
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Role</label>
-            <Controller
-              name="role"
-              control={control}
-              render={({ field }) => (
-                <select {...field} className="form-input" id="signup-role">
-                  {ROLE_OPTIONS.map(r => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-              )}
-            />
-            {errors.role && <span className="form-error">{errors.role.message}</span>}
-          </div>
+          {!isPresidentSetup && (
+            <div className="form-group">
+              <label className="form-label">Role</label>
+              <Controller
+                name="role"
+                control={control}
+                render={({ field }) => (
+                  <select {...field} className="form-input" id="signup-role">
+                    {ROLE_OPTIONS.map(r => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                )}
+              />
+              {errors.role && <span className="form-error">{errors.role.message}</span>}
+            </div>
+          )}
 
           {needsDomain && (
             <div className="form-group">
@@ -184,7 +220,7 @@ export default function SignupPage() {
             disabled={loading}
             style={{ marginTop: '8px' }}
           >
-            {loading ? 'Submitting…' : 'Request Access'}
+            {loading ? 'Submitting…' : isPresidentSetup ? 'Create Account' : 'Request Access'}
           </button>
         </form>
 

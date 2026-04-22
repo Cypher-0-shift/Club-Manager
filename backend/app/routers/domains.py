@@ -7,6 +7,13 @@ router = APIRouter(prefix="/domains", tags=["domains"])
 EXEC_ROLES = ("president", "vp", "secretary")
 
 
+@router.get("/public", response_model=list[DomainOut])
+async def list_public_domains():
+    sb = get_supabase_admin()
+    result = sb.table("domains").select("*").order("name").execute()
+    return result.data or []
+
+
 @router.get("/", response_model=list[DomainOut])
 async def list_domains(current_user: dict = Depends(get_current_user)):
     sb = get_supabase_admin()

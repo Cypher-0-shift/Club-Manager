@@ -4,6 +4,7 @@ import { Task, TaskStatus } from '@/types';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { TaskCard } from './TaskCard';
+import { LayoutList, Plus } from 'lucide-react';
 
 const COLUMN_LABELS: Record<TaskStatus, string> = {
   pending: 'Pending',
@@ -44,15 +45,20 @@ export function KanbanColumn({ status, tasks, onTaskClick, onAddTask, canAdd }: 
       style={{
         boxShadow: isOver ? `inset 0 0 0 2px ${COLUMN_COLORS[status]}` : undefined,
         transition: 'box-shadow 0.15s',
+        borderLeft: `2px solid ${COLUMN_COLORS[status]}`,
+        borderTop: 'none',
       }}
     >
       {/* Header */}
-      <div className="kanban-header">
+      <div className="kanban-header" style={{ 
+        background: `color-mix(in srgb, ${COLUMN_COLORS[status]} 8%, transparent)`,
+        borderBottom: `1px solid color-mix(in srgb, ${COLUMN_COLORS[status]} 20%, transparent)`
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span
-            style={{ width: '8px', height: '8px', borderRadius: '50%', background: COLUMN_COLORS[status] }}
+            style={{ width: '8px', height: '8px', borderRadius: '50%', background: COLUMN_COLORS[status], boxShadow: `0 0 8px ${COLUMN_COLORS[status]}` }}
           />
-          <span className="kanban-title">{COLUMN_LABELS[status]}</span>
+          <span className="kanban-title" style={{ color: 'var(--color-text-primary)' }}>{COLUMN_LABELS[status]}</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <span className="kanban-count">{tasks.length}</span>
@@ -73,7 +79,23 @@ export function KanbanColumn({ status, tasks, onTaskClick, onAddTask, canAdd }: 
       <div className="kanban-body">
         <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
           {sortedTasks.length === 0
-            ? <div className="kanban-empty">No tasks here</div>
+            ? (
+              <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '12px', border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-sm)',
+                padding: '32px 16px', color: 'var(--color-text-muted)', textAlign: 'center', cursor: canAdd ? 'pointer' : 'default',
+                transition: 'border-color 0.15s, color 0.15s'
+              }}
+              onClick={canAdd ? onAddTask : undefined}
+              onMouseEnter={(e) => { if(canAdd) { e.currentTarget.style.borderColor = 'var(--color-brand)'; e.currentTarget.style.color = 'var(--color-brand)'; } }}
+              onMouseLeave={(e) => { if(canAdd) { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.color = 'var(--color-text-muted)'; } }}
+              >
+                <LayoutList size={24} opacity={0.6} />
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>
+                  {canAdd && status !== 'overdue' ? '+ Add your first task' : 'No tasks here'}
+                </span>
+              </div>
+            )
             : sortedTasks.map(t => (
                 <TaskCard key={t.id} task={t} onClick={() => onTaskClick(t)} />
               ))
