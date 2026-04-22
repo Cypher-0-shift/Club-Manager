@@ -7,23 +7,18 @@ import { api } from '@/lib/api';
 
 interface DomainCardProps {
   domain: Domain;
+  tasks: Task[];
+  projects: Project[];
 }
 
-export function DomainCard({ domain }: DomainCardProps) {
+export function DomainCard({ domain, tasks, projects }: DomainCardProps) {
   const router = useRouter();
 
-  const { data: tasks = [] } = useQuery<Task[]>({
-    queryKey: ['tasks-domain', domain.id],
-    queryFn: () => api.get(`/tasks?domain_id=${domain.id}`).then(r => r.data),
-  });
+  const domainTasks = tasks.filter(t => t.project?.domain_id === domain.id || t.project_id === projects.find(p => p.domain_id === domain.id)?.id);
+  const domainProjects = projects.filter(p => p.domain_id === domain.id);
 
-  const { data: projects = [] } = useQuery<Project[]>({
-    queryKey: ['projects-domain', domain.id],
-    queryFn: () => api.get(`/projects?domain_id=${domain.id}`).then(r => r.data),
-  });
-
-  const completed = tasks.filter(t => t.status === 'completed').length;
-  const total = tasks.length;
+  const completed = domainTasks.filter(t => t.status === 'completed').length;
+  const total = domainTasks.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
@@ -37,7 +32,7 @@ export function DomainCard({ domain }: DomainCardProps) {
 
       <div style={{ display: 'flex', gap: '16px', marginBottom: '12px' }}>
         <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-          {projects.length} project{projects.length !== 1 ? 's' : ''}
+          {domainProjects.length} project{domainProjects.length !== 1 ? 's' : ''}
         </span>
         <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
           {total} task{total !== 1 ? 's' : ''}
@@ -59,14 +54,14 @@ export function DomainCard({ domain }: DomainCardProps) {
   );
 }
 
-export function DomainCardGrid({ domains }: { domains: Domain[] }) {
+export function DomainCardGrid({ domains, tasks, projects }: { domains: Domain[], tasks: Task[], projects: Project[] }) {
   return (
     <div style={{
       display: 'grid',
       gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
       gap: '16px',
     }}>
-      {domains.map(d => <DomainCard key={d.id} domain={d} />)}
+      {domains.map(d => <DomainCard key={d.id} domain={d} tasks={tasks} projects={projects} />)}
     </div>
   );
 }

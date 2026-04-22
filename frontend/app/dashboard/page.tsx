@@ -3,17 +3,24 @@
 import { AppShell } from '@/components/layout/AppShell';
 import { useAppStore } from '@/lib/store';
 import { DashboardPresident, DashboardMember, DashboardLead } from '@/components/dashboard/DashboardViews';
-import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useAuthHydration } from '@/hooks/useAuthHydration';
 
 export default function DashboardPage() {
-  const { user, role } = useAppStore();
-  const router = useRouter();
+  const { hydrated } = useAuthHydration();
+  const { role } = useAppStore();
 
-  useEffect(() => {
-    // If no role set, redirect to landing page
-    if (!role) router.push('/');
-  }, [role]);
+  if (!hydrated) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--color-bg)',
+      }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!role) return null;
 
   const renderDashboard = () => {
     switch (role) {
@@ -27,8 +34,6 @@ export default function DashboardPage() {
         return <DashboardMember />;
     }
   };
-
-  if (!role) return null;
 
   return <AppShell>{renderDashboard()}</AppShell>;
 }

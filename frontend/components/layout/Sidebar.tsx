@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Domain } from '@/types';
+import { Domain, Project } from '@/types';
 
 import { 
   LayoutDashboard, 
@@ -19,18 +19,62 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  GripVertical
 } from 'lucide-react';
 
 const EXEC_ROLES = ['president', 'vp', 'secretary'];
+const MIN_WIDTH = 220;
+const MAX_WIDTH = 480;
 
 export function Sidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project_id');
   const router = useRouter();
   const { user, role, clearUser } = useAppStore();
   const { toast } = useToast();
+  
   const [domainsOpen, setDomainsOpen] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const [width, setWidth] = useState(260);
+  const [isResizing, setIsResizing] = useState(false);
+  
+  const sidebarRef = useRef<HTMLElement>(null);
+
+  // Load width from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('sidebar-width');
+    if (saved) setWidth(parseInt(saved, 10));
+  }, []);
+
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+  }, []);
+
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = e.clientX;
+      if (newWidth >= MIN_WIDTH && newWidth <= MAX_WIDTH) {
+        setWidth(newWidth);
+        localStorage.setItem('sidebar-width', newWidth.toString());
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    window.addEventListener('mousemove', resize);
+    window.addEventListener('mouseup', stopResizing);
+    return () => {
+      window.removeEventListener('mousemove', resize);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [resize, stopResizing]);
 
   const { data: domains } = useQuery<Domain[]>({
     queryKey: ['domains'],
@@ -38,7 +82,15 @@ export function Sidebar() {
     enabled: !!user,
   });
 
+  const { data: activeProject } = useQuery<Project>({
+    queryKey: ['project', projectId],
+    queryFn: () => api.get(`/projects/${projectId}`).then(r => r.data),
+    enabled: !!projectId,
+  });
+
+  const activeDomainId = activeProject?.domain_id;
   const isActive = (path: string) => pathname.startsWith(path);
+  const isBoardActive = pathname === '/board' && !projectId;
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -53,24 +105,46 @@ export function Sidebar() {
 
   function getAvatarColor(id: string) {
     const colors = ['#6366f1','#8b5cf6','#06b6d4','#10b981','#f59e0b','#ef4444'];
-    const i = id.charCodeAt(0) % colors.length;
-    return colors[i];
+    return colors[id.charCodeAt(0) % colors.length];
   }
 
   return (
-    <aside style={{
-      width: collapsed ? '72px' : 'var(--sidebar-width)',
-      minWidth: collapsed ? '72px' : 'var(--sidebar-width)',
-      background: 'var(--color-surface)',
-      borderRight: '1px solid var(--color-border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100vh',
-      position: 'sticky',
-      top: 0,
-      overflowY: 'auto',
-      transition: 'width 0.3s ease, min-width 0.3s ease',
-    }}>
+    <aside 
+      ref={sidebarRef}
+      style={{
+        width: collapsed ? '72px' : `${width}px`,
+        minWidth: collapsed ? '72px' : `${width}px`,
+        background: 'var(--color-surface)',
+        borderRight: '1px solid var(--color-border-subtle)',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        overflowY: 'auto',
+        transition: isResizing ? 'none' : 'width 0.3s ease, min-width 0.3s ease',
+        userSelect: isResizing ? 'none' : 'auto',
+      }}
+    >
+      {/* Resize Handle */}
+      {!collapsed && (
+        <div
+          onMouseDown={startResizing}
+          style={{
+            position: 'absolute',
+            right: '-2px',
+            top: 0,
+            bottom: 0,
+            width: '4px',
+            cursor: 'col-resize',
+            zIndex: 100,
+            background: isResizing ? 'var(--color-brand)' : 'transparent',
+            transition: 'background 0.2s',
+          }}
+          title="Drag to resize"
+        />
+      )}
+
       {/* Logo */}
       <div style={{
         height: '56px',
@@ -91,7 +165,7 @@ export function Sidebar() {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: '14px', fontWeight: 700, color: '#fff',
             }}>C</div>
-            <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap' }}>Club Manager</span>
+            <span style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Club Manager</span>
           </div>
         )}
         <button
@@ -113,25 +187,45 @@ export function Sidebar() {
         </div>
         
         <a href="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Dashboard" : undefined}>
-          <LayoutDashboard size={16} /> {!collapsed && "Dashboard"}
+          <LayoutDashboard size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dashboard</span>}
         </a>
 
         {/* Domains section */}
         <div>
-          <button
-            className={`nav-item ${isActive('/workspace') ? 'active' : ''}`}
-            style={{ width: '100%', justifyContent: collapsed ? 'center' : 'space-between', borderRadius: 0 }}
-            onClick={() => {
-               if (collapsed) setCollapsed(false);
-               else setDomainsOpen(o => !o);
+          <div 
+            className={`nav-item ${isActive('/workspace') || !!projectId ? 'active' : ''}`}
+            style={{ 
+              width: '100%', 
+              justifyContent: collapsed ? 'center' : 'space-between', 
+              borderRadius: 0,
+              paddingRight: collapsed ? '0' : '8px'
             }}
             title={collapsed ? "Domains" : undefined}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', justifyContent: collapsed ? 'center' : 'flex-start' }}>
-              <FolderKanban size={16} /> {!collapsed && "Domains"}
-            </span>
-            {!collapsed && (domainsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />)}
-          </button>
+            <a 
+              href="/workspace" 
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px', 
+                flex: 1,
+                textDecoration: 'none',
+                color: 'inherit',
+                minWidth: 0
+              }}
+            >
+              <FolderKanban size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Domains</span>}
+            </a>
+            {!collapsed && (
+              <button 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDomainsOpen(o => !o); }}
+                className="btn-ghost btn-icon btn-sm"
+                style={{ padding: '2px', marginLeft: '4px' }}
+              >
+                {domainsOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </button>
+            )}
+          </div>
 
           {!collapsed && domainsOpen && domains && (
             <div style={{ paddingLeft: '24px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
@@ -139,7 +233,7 @@ export function Sidebar() {
                 <a
                   key={d.id}
                   href={`/workspace/${d.id}`}
-                  className={`nav-item ${isActive(`/workspace/${d.id}`) ? 'active' : ''}`}
+                  className={`nav-item ${isActive(`/workspace/${d.id}`) || activeDomainId === d.id ? 'active' : ''}`}
                   style={{ padding: '6px 12px', fontSize: '12px' }}
                 >
                   <span style={{
@@ -147,15 +241,15 @@ export function Sidebar() {
                     background: d.color_hex, flexShrink: 0,
                     display: 'inline-block',
                   }} />
-                  {d.name}
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
                 </a>
               ))}
             </div>
           )}
         </div>
 
-        <a href="/board" className={`nav-item ${isActive('/board') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "My Board" : undefined}>
-          <KanbanSquare size={16} /> {!collapsed && "My Board"}
+        <a href="/board" className={`nav-item ${isBoardActive ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "My Board" : undefined}>
+          <KanbanSquare size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>My Board</span>}
         </a>
 
         {EXEC_ROLES.includes(role ?? '') && (
@@ -166,10 +260,10 @@ export function Sidebar() {
                </span>
             </div>
             <a href="/analytics" className={`nav-item ${isActive('/analytics') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Analytics" : undefined}>
-              <BarChart3 size={16} /> {!collapsed && "Analytics"}
+              <BarChart3 size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Analytics</span>}
             </a>
             <a href="/users" className={`nav-item ${isActive('/users') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Directory" : undefined}>
-              <Users size={16} /> {!collapsed && "Directory"}
+              <Users size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Directory</span>}
             </a>
           </>
         )}
@@ -181,7 +275,7 @@ export function Sidebar() {
         </div>
 
         <a href="/settings" className={`nav-item ${isActive('/settings') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Settings" : undefined}>
-          <Settings size={16} /> {!collapsed && "Settings"}
+          <Settings size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Settings</span>}
         </a>
       </nav>
 

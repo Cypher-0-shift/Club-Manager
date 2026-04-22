@@ -1,5 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Query
 from fastapi.responses import JSONResponse
+from urllib.parse import urlparse
+
+def _is_valid_url(url: str) -> bool:
+    try:
+        parsed = urlparse(url)
+        return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+    except Exception:
+        return False
 from app.dependencies.auth import get_current_user
 from app.core.supabase import get_supabase_admin
 from app.schemas.schemas import (
@@ -59,6 +67,15 @@ def _enrich(tasks: list[dict], sb) -> list[dict]:
         t["creator"]          = user_map.get(t["created_by"])
         t["message_count"]    = msg_counts.get(t["id"], 0)
         t["submission_count"] = sub_counts.get(t["id"], 0)
+
+        # Backend fallback for overdue detection
+        if t.get("deadline") and not t.get("is_overdue"):
+            from datetime import datetime, timezone
+            deadline = datetime.fromisoformat(t["deadline"].replace("Z", "+00:00"))
+            if deadline < datetime.now(timezone.utc) and t["status"] not in ("completed", "overdue"):
+                t["is_overdue"] = True
+                t["status"] = "overdue"
+
     return tasks
 
 
@@ -77,6 +94,8 @@ async def list_tasks(
     domain_id: Optional[str] = None,
     project_id: Optional[str] = None,
     status: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: dict = Depends(get_current_user),
 ):
     sb = get_supabase_admin()
@@ -85,24 +104,18 @@ async def list_tasks(
     if project_id:
         query = query.eq("project_id", project_id)
     elif domain_id:
-        # Filter tasks via project → domain join
-        proj_res = sb.table("projects").select("id").eq("domain_id", domain_id).execute()
-        proj_ids = [p["id"] for p in (proj_res.data or [])]
-        if not proj_ids:
-            return []
-        query = query.in_("project_id", proj_ids)
-    elif current_user["role"] == "member":
+        query = query.eq("domain_id", domain_id)
+
+    # ALWAYS apply member isolation regardless of other filters
+    if current_user["role"] == "member":
         query = query.eq("assignee_id", current_user["id"])
-    elif current_user["role"] == "lead":
-        proj_res = sb.table("projects").select("id").eq("domain_id", current_user.get("domain_id")).execute()
-        proj_ids = [p["id"] for p in (proj_res.data or [])]
-        if proj_ids:
-            query = query.in_("project_id", proj_ids)
+    elif current_user["role"] == "lead" and not project_id and not domain_id:
+        query = query.eq("domain_id", current_user.get("domain_id"))
 
     if status:
         query = query.eq("status", status)
 
-    result = query.order("is_pinned", desc=True).order("created_at", desc=True).execute()
+    result = query.order("is_pinned", desc=True).order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     return _enrich(result.data or [], sb)
 
 
@@ -119,12 +132,17 @@ async def create_task(
 
     sb = get_supabase_admin()
 
-    # Verify project exists and (for leads) belongs to their domain
-    proj = sb.table("projects").select("*").eq("id", body.project_id).single().execute()
-    if not proj.data:
-        raise HTTPException(status_code=404, detail="Project not found")
-    if current_user["role"] == "lead" and proj.data["domain_id"] != current_user.get("domain_id"):
-        raise HTTPException(status_code=403, detail="Project belongs to another domain")
+    # Verify domain access
+    if current_user["role"] == "lead" and body.domain_id != current_user.get("domain_id"):
+        raise HTTPException(status_code=403, detail="Cannot create task in another domain")
+
+    # If project is provided, verify it belongs to the domain
+    if body.project_id:
+        proj = sb.table("projects").select("domain_id").eq("id", body.project_id).single().execute()
+        if not proj.data:
+            raise HTTPException(status_code=404, detail="Project not found")
+        if proj.data["domain_id"] != body.domain_id:
+            raise HTTPException(status_code=400, detail="Project does not belong to the specified domain")
 
     payload = body.model_dump()
     payload["created_by"] = current_user["id"]
@@ -155,7 +173,12 @@ async def get_task(task_id: str, current_user: dict = Depends(get_current_user))
     result = sb.table("tasks").select("*").eq("id", task_id).single().execute()
     if not result.data:
         raise HTTPException(status_code=404, detail="Task not found")
-    return _enrich([result.data], sb)[0]
+    
+    task = result.data
+    if current_user["role"] == "member" and task.get("assignee_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    return _enrich([task], sb)[0]
 
 
 # ─────────────────────────────────────────────
@@ -248,6 +271,14 @@ async def submit_task(
     if not task.data:
         raise HTTPException(status_code=404, detail="Task not found")
 
+    task_data = task.data
+    if current_user["role"] == "member" and task_data.get("assignee_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="You can only submit for your own tasks")
+
+    existing = sb.table("submissions").select("id").eq("task_id", task_id).execute()
+    if existing.data:
+        raise HTTPException(status_code=409, detail="Submission already exists for this task")
+
     payload: dict = {
         "task_id": task_id,
         "submitted_by": current_user["id"],
@@ -273,8 +304,8 @@ async def submit_task(
         payload["file_size"] = len(content)
 
     elif type == "url":
-        if not url or not url.startswith("http"):
-            raise HTTPException(status_code=400, detail="Valid URL required")
+        if not url or not _is_valid_url(url):
+            raise HTTPException(status_code=400, detail="Valid HTTP/HTTPS URL required")
         payload["url"] = url
 
     elif type == "text":
@@ -300,6 +331,10 @@ async def submit_task(
 @router.get("/{task_id}/submissions", response_model=list[dict])
 async def list_submissions(task_id: str, current_user: dict = Depends(get_current_user)):
     sb = get_supabase_admin()
+    task_res = sb.table("tasks").select("assignee_id").eq("id", task_id).single().execute()
+    if task_res.data and current_user["role"] == "member" and task_res.data.get("assignee_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+
     result = sb.table("submissions").select("*").eq("task_id", task_id).order("created_at", desc=True).execute()
     return result.data or []
 
@@ -310,6 +345,9 @@ async def list_submissions(task_id: str, current_user: dict = Depends(get_curren
 @router.get("/{task_id}/messages", response_model=list[dict])
 async def list_messages(task_id: str, current_user: dict = Depends(get_current_user)):
     sb = get_supabase_admin()
+    task_res = sb.table("tasks").select("assignee_id").eq("id", task_id).single().execute()
+    if task_res.data and current_user["role"] == "member" and task_res.data.get("assignee_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
     msgs = sb.table("messages").select("*, sender:users(id,full_name,email,role)").eq("task_id", task_id).order("created_at").execute()
     return msgs.data or []
 

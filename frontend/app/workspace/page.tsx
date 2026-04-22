@@ -4,13 +4,14 @@ import { AppShell } from '@/components/layout/AppShell';
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
-import { Domain, Project, User } from '@/types';
+import { Domain, Project, Task } from '@/types';
 import { DomainCardGrid } from '@/components/dashboard/DomainCard';
 import { SkeletonCard } from '@/components/dashboard/StatCard';
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from '@/components/ui/Toast';
+import { useAuthHydration } from '@/hooks/useAuthHydration';
 
 function CreateDomainModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
   const { toast } = useToast();
@@ -61,6 +62,7 @@ function CreateDomainModal({ onClose, onSuccess }: { onClose: () => void; onSucc
 }
 
 export default function WorkspacePage() {
+  const { hydrated } = useAuthHydration();
   const { role } = useAppStore();
   const searchParams = useSearchParams();
   const [showCreate, setShowCreate] = useState(false);
@@ -70,12 +72,39 @@ export default function WorkspacePage() {
       setShowCreate(true);
     }
   }, [searchParams]);
+
   const canManage = ['president','vp','secretary'].includes(role ?? '');
 
-  const { data: domains = [], isLoading } = useQuery<Domain[]>({
+  const { data: domains = [], isLoading: domainsLoading } = useQuery<Domain[]>({
     queryKey: ['domains'],
     queryFn: () => api.get('/domains').then(r => r.data),
+    enabled: hydrated && !!role,
   });
+
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: () => api.get('/projects').then(r => r.data),
+    enabled: hydrated && !!role,
+  });
+
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
+    queryKey: ['tasks'],
+    queryFn: () => api.get('/tasks').then(r => r.data),
+    enabled: hydrated && !!role,
+  });
+
+  const isLoading = domainsLoading || projectsLoading || tasksLoading;
+
+  if (!hydrated) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--color-bg)',
+      }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
 
   return (
     <AppShell>
@@ -97,7 +126,7 @@ export default function WorkspacePage() {
               {[0,1,2].map(i => <SkeletonCard key={i} />)}
             </div>
           : domains.length > 0
-            ? <DomainCardGrid domains={domains} />
+            ? <DomainCardGrid domains={domains} tasks={tasks} projects={projects} />
             : <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px' }}>
                 No domains yet. {canManage ? 'Create the first one!' : 'Ask your president to create a domain.'}
               </div>

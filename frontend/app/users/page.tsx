@@ -7,10 +7,12 @@ import { api } from '@/lib/api';
 import { useToast } from '@/components/ui/Toast';
 import { User } from '@/types';
 import { SkeletonCard } from '@/components/dashboard/StatCard';
+import { useAuthHydration } from '@/hooks/useAuthHydration';
 
 const ROLE_OPTIONS = ['president','vp','secretary','lead','member'];
 
 export default function UsersPage() {
+  const { hydrated } = useAuthHydration();
   const { role } = useAppStore();
   const { toast } = useToast();
   const qc = useQueryClient();
@@ -18,6 +20,7 @@ export default function UsersPage() {
   const { data: users = [], isLoading } = useQuery<User[]>({
     queryKey: ['all-users'],
     queryFn: () => api.get('/users').then(r => r.data),
+    enabled: hydrated && !!role && ['president','vp','secretary'].includes(role),
   });
 
   const approveMutation = useMutation({
@@ -32,8 +35,19 @@ export default function UsersPage() {
     onError: (e: Error) => toast(e.message, 'error'),
   });
 
+  if (!hydrated) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--color-bg)',
+      }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
   if (!['president','vp','secretary'].includes(role ?? '')) {
-    return <AppShell><div style={{ color: 'var(--color-text-muted)' }}>Access denied</div></AppShell>;
+    return <AppShell><div style={{ color: 'var(--color-text-muted)', padding: '24px' }}>Access denied</div></AppShell>;
   }
 
   const pending  = users.filter(u => !u.is_approved);

@@ -2,17 +2,26 @@
 
 import { AppShell } from '@/components/layout/AppShell';
 import { useAppStore } from '@/lib/store';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/components/ui/Toast';
+import { useAuthHydration } from '@/hooks/useAuthHydration';
 
 export default function SettingsPage() {
+  const { hydrated } = useAuthHydration();
   const { user, setUser } = useAppStore();
   const { toast } = useToast();
   const [fullName, setFullName] = useState(user?.full_name ?? '');
   const [newPassword, setNewPassword] = useState('');
+
+  // Sync state if user is loaded later
+  useEffect(() => {
+    if (user?.full_name) {
+      setFullName(user.full_name);
+    }
+  }, [user]);
 
   const updateProfile = useMutation({
     mutationFn: () => api.patch(`/users/${user?.id}`, { full_name: fullName }),
@@ -25,6 +34,17 @@ export default function SettingsPage() {
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) toast(error.message, 'error');
     else { toast('Password updated successfully', 'success'); setNewPassword(''); }
+  }
+
+  if (!hydrated) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--color-bg)',
+      }}>
+        <div className="spinner" />
+      </div>
+    );
   }
 
   return (

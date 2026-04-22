@@ -93,6 +93,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
               {deadlineStr}
             </span>
           )}
+          {task.is_overdue && (
+            <span className="badge badge-overdue" style={{ fontSize: '9px', padding: '1px 4px' }}>OVERDUE</span>
+          )}
         </div>
 
         {/* Meta counts */}

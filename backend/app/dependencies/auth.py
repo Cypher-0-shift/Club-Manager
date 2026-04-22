@@ -17,21 +17,19 @@ async def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
     
     token = credentials.credentials
+    sb = get_supabase_admin()
+    
     try:
-        payload = jwt.decode(
-            token,
-            settings.JWT_SECRET,
-            algorithms=["HS256"],
-            options={"verify_aud": False},
-        )
-        user_id = payload.get("sub")
-    except JWTError:
+        user_res = sb.auth.get_user(token)
+        if not user_res or not user_res.user:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+        user_id = user_res.user.id
+    except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
 
-    sb = get_supabase_admin()
     result = sb.table("users").select("*").eq("id", user_id).single().execute()
 
     if not result.data:

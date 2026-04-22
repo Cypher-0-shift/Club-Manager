@@ -1,25 +1,38 @@
 'use client';
 
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
-
-function getBreadcrumb(pathname: string): string {
-  const parts = pathname.split('/').filter(Boolean);
-  if (parts.length === 0) return 'Home';
-  const map: Record<string, string> = {
-    dashboard: 'Dashboard',
-    board: 'My Board',
-    workspace: 'Workspace',
-    analytics: 'Analytics',
-    users: 'Users',
-    settings: 'Settings',
-  };
-  return parts.map(p => map[p] ?? p).join(' / ');
-}
+import { useQuery } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { Project } from '@/types';
 
 export function TopBar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project_id');
   const { user, role } = useAppStore();
+
+  const { data: activeProject } = useQuery<Project>({
+    queryKey: ['project', projectId],
+    queryFn: () => api.get(`/projects/${projectId}`).then(r => r.data),
+    enabled: !!projectId,
+  });
+
+  function getBreadcrumb(): string {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length === 0) return 'Home';
+
+    const map: Record<string, string> = {
+      dashboard: 'Dashboard',
+      board: projectId ? (activeProject?.name ? `${activeProject.name} Board` : 'Project Board') : 'My Board',
+      workspace: 'Workspace',
+      analytics: 'Analytics',
+      users: 'Users',
+      settings: 'Settings',
+    };
+
+    return parts.map(p => map[p] ?? p).join(' / ');
+  }
 
   return (
     <header style={{
@@ -36,8 +49,8 @@ export function TopBar() {
       flexShrink: 0,
     }}>
       {/* Breadcrumb */}
-      <div style={{ flex: 1, fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-        {getBreadcrumb(pathname)}
+      <div style={{ flex: 1, fontSize: '13px', color: 'var(--color-text-secondary)', fontWeight: 500 }}>
+        {getBreadcrumb()}
       </div>
 
       {/* Role badge */}

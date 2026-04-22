@@ -2,16 +2,19 @@ import os
 from supabase import create_client
 
 def seed():
-    url = os.environ.get("NEXT_PUBLIC_SUPABASE_URL", "https://hchuakyxonporwheykot.supabase.co")
-    # Need to read the service key from .env
     env_path = os.path.join(os.path.dirname(__file__), ".env")
+    url = ""
     key = ""
     with open(env_path, "r") as f:
         for line in f:
+            if line.startswith("SUPABASE_URL="):
+                url = line.strip().split("=", 1)[1]
             if line.startswith("SUPABASE_SERVICE_KEY="):
                 key = line.strip().split("=", 1)[1]
     
-    if not key:
+    if not url or not key:
+        print("Could not find SUPABASE_URL or SUPABASE_SERVICE_KEY in .env")
+        return
         print("Could not find SUPABASE_SERVICE_KEY")
         return
 

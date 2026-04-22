@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { Task, TaskStatus, TaskPriority } from '@/types';
 import { StatCard } from '@/components/dashboard/StatCard';
+import { useAuthHydration } from '@/hooks/useAuthHydration';
 
 const STATUS_ORDER: TaskStatus[] = ['pending','in_progress','completed','overdue'];
 const PRIORITY_ORDER: TaskPriority[] = ['low','medium','high','critical'];
@@ -46,23 +47,35 @@ function BarChart({ data, total, colorMap }: { data: [string, number][]; total: 
 }
 
 export default function AnalyticsPage() {
+  const { hydrated } = useAuthHydration();
   const { role } = useAppStore();
 
-  // ⚠️ All hooks must be called unconditionally — before any early returns
+  const isAdmin = ['president', 'vp', 'secretary'].includes(role ?? '');
+
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ['all-tasks'],
     queryFn: () => api.get('/tasks').then(r => r.data),
-    enabled: ['president', 'vp', 'secretary'].includes(role ?? ''),
+    enabled: hydrated && isAdmin,
   });
+
+  if (!hydrated) {
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        height: '100vh', background: 'var(--color-bg)',
+      }}>
+        <div className="spinner" />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <AppShell><div style={{ color: 'var(--color-text-muted)', padding: '24px' }}>Access denied — Admin only</div></AppShell>;
+  }
 
   const byStatus = STATUS_ORDER.map(s => [s, tasks.filter(t => t.status === s).length] as [string, number]);
   const byPriority = PRIORITY_ORDER.map(p => [p, tasks.filter(t => t.priority === p).length] as [string, number]);
   const completionRate = tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0;
-
-  // Guard AFTER all hooks
-  if (!['president', 'vp', 'secretary'].includes(role ?? '')) {
-    return <AppShell><div style={{ color: 'var(--color-text-muted)', padding: '24px' }}>Access denied — Admin only</div></AppShell>;
-  }
 
   return (
     <AppShell>

@@ -12,17 +12,16 @@ import { TaskPriority, TaskStatus, Project, User } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
-const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  low: '#22c55e', medium: '#f59e0b', high: '#f97316', critical: '#ef4444',
-};
 
 const schema = z.object({
   title: z.string().min(1, 'Title required').max(120, 'Max 120 characters'),
   description: z.string().optional(),
   priority: z.enum(['low','medium','high','critical'] as const),
-  deadline: z.string().optional(),
-  project_id: z.string().min(1, 'Project required'),
-  assignee_id: z.string().optional(),
+  deadlineDate: z.string().optional(),
+  deadlineTime: z.string().optional(),
+  domain_id: z.string().min(1, 'Domain required'),
+  project_id: z.string().optional().nullable(),
+  assignee_id: z.string().optional().nullable(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -30,9 +29,10 @@ interface CreateTaskModalProps {
   defaultStatus: TaskStatus;
   onClose: () => void;
   onSuccess: () => void;
+  forcedProjectId?: string; // Optional: force a specific project
 }
 
-export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTaskModalProps) {
+export function CreateTaskModal({ defaultStatus, onClose, onSuccess, forcedProjectId }: CreateTaskModalProps) {
   const { user, domainId } = useAppStore();
   const { toast } = useToast();
   const [charCount, setCharCount] = useState(0);
@@ -40,28 +40,47 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
   const { data: projects = [] } = useQuery<Project[]>({
     queryKey: ['projects', domainId],
     queryFn: () => api.get(domainId ? `/projects?domain_id=${domainId}` : '/projects').then(r => r.data),
+    enabled: !!domainId,
   });
 
   const { data: members = [] } = useQuery<User[]>({
     queryKey: ['members', domainId],
     queryFn: () => api.get(domainId ? `/users?domain_id=${domainId}` : '/users').then(r => r.data),
+    enabled: !!domainId,
   });
 
   const {
     register, handleSubmit, watch, control, formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { priority: 'medium' },
+    defaultValues: { 
+      priority: 'medium', 
+      domain_id: domainId || '',
+      project_id: forcedProjectId || null 
+    },
     mode: 'onChange',
   });
 
-  const selectedPriority = watch('priority');
   const title = watch('title');
   useEffect(() => setCharCount(title?.length ?? 0), [title]);
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) =>
-      api.post('/tasks', { ...data, status: defaultStatus, created_by: user?.id }),
+    mutationFn: (data: FormData) => {
+      const { deadlineDate, deadlineTime, ...rest } = data;
+      let deadline = null;
+      if (deadlineDate) {
+        const time = deadlineTime || '23:59';
+        deadline = `${deadlineDate}T${time}:00`;
+      }
+      
+      return api.post('/tasks', { 
+        ...rest, 
+        deadline,
+        status: defaultStatus, 
+        created_by: user?.id,
+        project_id: data.project_id || null // Ensure null if empty
+      });
+    },
     onSuccess: () => {
       toast('Task created!', 'success');
       onSuccess();
@@ -69,12 +88,12 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
     onError: (err: Error) => toast(err.message, 'error'),
   });
 
-  const today = new Date().toISOString().slice(0, 16);
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-panel"
+        className="modal-panel glass"
         style={{ width: '100%', maxWidth: '500px' }}
         onClick={e => e.stopPropagation()}
       >
@@ -84,7 +103,7 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
         }}>
           <h2 style={{ fontSize: '16px', fontWeight: 600 }}>Create Task</h2>
-          <button className="btn-ghost btn-icon" onClick={onClose} style={{ fontSize: '18px' }}>×</button>
+          <button className="btn-ghost btn-icon" onClick={onClose}>×</button>
         </div>
 
         <form
@@ -121,7 +140,7 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
             />
           </div>
 
-          {/* Priority toggle */}
+          {/* Priority */}
           <div className="form-group">
             <label className="form-label">Priority *</label>
             <Controller
@@ -135,7 +154,6 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
                       type="button"
                       className={`priority-toggle-btn ${field.value === p ? `active-${p}` : ''}`}
                       onClick={() => field.onChange(p)}
-                      id={`priority-${p}`}
                     >
                       {p.charAt(0).toUpperCase() + p.slice(1)}
                     </button>
@@ -148,29 +166,49 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
           {/* Deadline */}
           <div className="form-group">
             <label className="form-label">Deadline</label>
-            <input
-              {...register('deadline')}
-              type="datetime-local"
-              className="form-input"
-              min={today}
-              id="create-task-deadline"
-            />
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ flex: 1 }}>
+                <input
+                  {...register('deadlineDate')}
+                  type="date"
+                  className="form-input"
+                  min={today}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <input
+                  {...register('deadlineTime')}
+                  type="time"
+                  className="form-input"
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+            <span style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
+              If time is omitted, it defaults to 23:59.
+            </span>
           </div>
 
-          {/* Project */}
+          {/* Project - Optional */}
           <div className="form-group">
-            <label className="form-label">Project *</label>
+            <label className="form-label">Project (Optional)</label>
             <Controller
               name="project_id"
               control={control}
               render={({ field }) => (
-                <select {...field} className="form-input" id="create-task-project">
-                  <option value="">Select project…</option>
+                <select 
+                  {...field} 
+                  value={field.value || ''} 
+                  onChange={e => field.onChange(e.target.value || null)}
+                  className="form-input"
+                  disabled={!!forcedProjectId}
+                >
+                  <option value="">Standalone (No Project)</option>
                   {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               )}
             />
-            {errors.project_id && <span className="form-error">{errors.project_id.message}</span>}
           </div>
 
           {/* Assignee */}
@@ -180,7 +218,12 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
               name="assignee_id"
               control={control}
               render={({ field }) => (
-                <select {...field} className="form-input" id="create-task-assignee">
+                <select 
+                  {...field} 
+                  value={field.value || ''} 
+                  onChange={e => field.onChange(e.target.value || null)}
+                  className="form-input"
+                >
                   <option value="">Unassigned</option>
                   {members.map(m => <option key={m.id} value={m.id}>{m.full_name} ({m.role})</option>)}
                 </select>
@@ -191,7 +234,6 @@ export function CreateTaskModal({ defaultStatus, onClose, onSuccess }: CreateTas
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
             <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
             <button
-              id="create-task-submit"
               type="submit"
               className="btn btn-primary"
               disabled={!isValid || mutation.isPending}

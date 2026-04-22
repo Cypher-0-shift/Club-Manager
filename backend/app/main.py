@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -51,6 +52,20 @@ async def log_requests(request: Request, call_next):
 # ─────────────────────────────────────────────
 # Global exception handler — returns standard envelope
 # ─────────────────────────────────────────────
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": str(exc.errors()),
+                "status": 422,
+                "trace_id": str(uuid.uuid4()),
+            }
+        },
+    )
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     trace_id = str(uuid.uuid4())

@@ -86,7 +86,6 @@ export default function SignupPage() {
         full_name: data.full_name,
         role: data.role,
         domain_id: needsDomain ? data.domain_id ?? null : null,
-        is_approved: false,
       });
 
       if (res.data.is_approved) {

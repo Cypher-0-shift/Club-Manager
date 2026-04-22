@@ -4,9 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
-import { User } from '@/types';
+import { User, Project, Task, Domain } from '@/types';
 import { StatsRow, StatCard, SkeletonCard } from '@/components/dashboard/StatCard';
 import { DomainCardGrid } from '@/components/dashboard/DomainCard';
+import { QK } from '@/lib/queryKeys';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Search, ArrowRight } from 'lucide-react';
@@ -18,13 +19,18 @@ export function DashboardPresident() {
   const [dismissedBanner, setDismissedBanner] = useState(false);
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
-    queryKey: ['all-tasks'],
+    queryKey: QK.tasks.all(),
     queryFn: () => api.get('/tasks').then(r => r.data),
   });
 
   const { data: domains = [], isLoading: domainsLoading } = useQuery({
-    queryKey: ['domains'],
+    queryKey: QK.domains.all(),
     queryFn: () => api.get('/domains').then(r => r.data),
+  });
+
+  const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
+    queryKey: ['projects'],
+    queryFn: () => api.get('/projects').then(r => r.data),
   });
 
   const { data: pendingUsers = [] } = useQuery<User[]>({
@@ -78,10 +84,10 @@ export function DashboardPresident() {
           <h2 className="section-title">Active Domains</h2>
           <a href="/workspace/new" className="btn btn-sm btn-primary">+ New Domain</a>
         </div>
-        {domainsLoading
+        {domainsLoading || projectsLoading || tasksLoading
           ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '16px' }}>{[0,1,2].map(i => <SkeletonCard key={i} />)}</div>
           : domains.length > 0
-            ? <DomainCardGrid domains={domains} />
+            ? <DomainCardGrid domains={domains} tasks={tasks} projects={projects} />
             : <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '32px' }}>
                 No domains yet. Create the first one!
               </div>
@@ -95,7 +101,7 @@ export function DashboardMember() {
   const { user } = useAppStore();
 
   const { data: myTasks = [], isLoading } = useQuery({
-    queryKey: ['my-tasks'],
+    queryKey: QK.tasks.mine(),
     queryFn: () => api.get('/tasks/my').then(r => r.data),
     enabled: !!user,
   });
@@ -115,7 +121,7 @@ export function DashboardMember() {
       {/* Welcome */}
       <div>
         <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px' }}>
-          Hello, {user?.full_name.split(' ')[0]} 👋
+          Hello, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--color-text-muted)' }}>
           {myTasks.filter(t => t.status !== 'completed').length} active tasks on your plate
@@ -169,13 +175,13 @@ export function DashboardLead() {
   const { domainId } = useAppStore();
 
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ['domain-tasks', domainId],
+    queryKey: QK.tasks.byDomain(domainId as string),
     queryFn: () => api.get(`/tasks?domain_id=${domainId}`).then(r => r.data),
     enabled: !!domainId,
   });
 
   const { data: domains = [] } = useQuery({
-    queryKey: ['domains'],
+    queryKey: QK.domains.all(),
     queryFn: () => api.get('/domains').then(r => r.data),
   });
 

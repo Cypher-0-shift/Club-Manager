@@ -18,7 +18,7 @@ class UserCreate(BaseModel):
     full_name: str
     role: UserRole = "member"
     domain_id: Optional[str] = None
-    is_approved: bool = False
+
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -90,7 +90,8 @@ class TaskCreate(BaseModel):
     description: Optional[str] = None
     priority: TaskPriority = "medium"
     deadline: Optional[datetime] = None
-    project_id: str
+    domain_id: str
+    project_id: Optional[str] = None
     assignee_id: Optional[str] = None
     status: TaskStatus = "pending"
 
@@ -106,6 +107,8 @@ class TaskUpdate(BaseModel):
     description: Optional[str] = None
     priority: Optional[TaskPriority] = None
     deadline: Optional[datetime] = None
+    domain_id: Optional[str] = None
+    project_id: Optional[str] = None
     assignee_id: Optional[str] = None
     is_pinned: Optional[bool] = None
 

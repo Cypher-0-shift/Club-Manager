@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
-import { Task, Message, TaskPriority, TaskStatus, PRIORITY_COLORS } from '@/types';
+import { useState, useEffect } from 'react';
+import { Task, Message, TaskPriority, TaskStatus, User } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
 import { format } from 'date-fns';
 import { LEAD_AND_ABOVE } from '@/types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2, Edit3, MessageSquare, Clock, User as UserIcon, AlertCircle } from 'lucide-react';
 
 interface TaskModalProps {
   task: Task;
@@ -24,7 +24,6 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string }[] 
 ];
 
 function MessageThread({ taskId }: { taskId: string }) {
-  const { user } = useAppStore();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [input, setInput] = useState('');
@@ -32,7 +31,7 @@ function MessageThread({ taskId }: { taskId: string }) {
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ['messages', taskId],
     queryFn: () => api.get(`/tasks/${taskId}/messages`).then(r => r.data),
-    refetchInterval: 10_000,
+    refetchInterval: 5000,
   });
 
   const sendMutation = useMutation({
@@ -56,42 +55,31 @@ function MessageThread({ taskId }: { taskId: string }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{
-        fontSize: '12px', fontWeight: 600, textTransform: 'uppercase',
-        letterSpacing: '0.06em', color: 'var(--color-text-muted)',
-        marginBottom: '12px',
-      }}>Comments ({messages.length})</div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid var(--color-border-subtle)', paddingBottom: '12px' }}>
+        <MessageSquare size={16} color="var(--color-text-muted)" />
+        <h3 style={{ fontSize: '14px', fontWeight: 600 }}>Discussion ({messages.length})</h3>
+      </div>
 
-      {/* Messages */}
-      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxHeight: '400px', overflowY: 'auto', paddingRight: '8px' }}>
         {messages.length === 0 && (
-          <div style={{ color: 'var(--color-text-muted)', fontSize: '12px', textAlign: 'center', padding: '16px 0' }}>
-            No messages yet
+          <div style={{ color: 'var(--color-text-muted)', fontSize: '13px', textAlign: 'center', padding: '32px 0' }}>
+            Start a conversation about this task...
           </div>
         )}
         {messages.map(m => (
-          <div key={m.id} style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-            <div
-              className="avatar avatar-sm"
-              style={{ background: getAvatarColor(m.sender_id), color: '#fff', flexShrink: 0 }}
-            >
+          <div key={m.id} style={{ display: 'flex', gap: '12px' }}>
+            <div className="avatar avatar-sm" style={{ background: getAvatarColor(m.sender_id), color: '#fff', flexShrink: 0 }}>
               {(m.sender?.full_name ?? 'U')[0]}
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '2px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600 }}>{m.sender?.full_name ?? 'Unknown'}</span>
-                <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'baseline', marginBottom: '4px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600 }}>{m.sender?.full_name ?? 'Unknown'}</span>
+                <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                   {format(new Date(m.created_at), 'MMM d, h:mm a')}
                 </span>
               </div>
-              <div style={{
-                fontSize: '13px', color: 'var(--color-text-secondary)',
-                background: 'var(--color-surface-raised)',
-                borderRadius: 'var(--radius-sm)',
-                padding: '8px 10px',
-                lineHeight: 1.5,
-              }}>
+              <div style={{ fontSize: '14px', color: 'var(--color-text-secondary)', background: 'var(--color-surface-raised)', borderRadius: 'var(--radius-md)', padding: '10px 14px', lineHeight: 1.5, border: '1px solid var(--color-border-subtle)' }}>
                 {m.content}
               </div>
             </div>
@@ -99,23 +87,17 @@ function MessageThread({ taskId }: { taskId: string }) {
         ))}
       </div>
 
-      {/* Input */}
-      <form onSubmit={handleSend} style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+      <form onSubmit={handleSend} style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
         <input
           className="form-input"
           style={{ flex: 1 }}
-          placeholder="Write a message…"
+          placeholder="Share an update or tag someone..."
           value={input}
           onChange={e => setInput(e.target.value)}
           id="message-input"
         />
-        <button
-          type="submit"
-          className="btn btn-primary btn-sm"
-          disabled={!input.trim() || sendMutation.isPending}
-          style={{ minWidth: '80px' }}
-        >
-          {sendMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Send'}
+        <button type="submit" className="btn btn-primary" disabled={!input.trim() || sendMutation.isPending} style={{ minWidth: '100px' }}>
+          {sendMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Comment'}
         </button>
       </form>
     </div>
@@ -123,16 +105,29 @@ function MessageThread({ taskId }: { taskId: string }) {
 }
 
 export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
-  const { user, role } = useAppStore();
+  const { user, role, domainId } = useAppStore();
   const { toast } = useToast();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
+  
+  // Edit State
   const [editTitle, setEditTitle] = useState(task.title);
+  const [editDesc, setEditDesc] = useState(task.description ?? '');
   const [editPriority, setEditPriority] = useState(task.priority);
+  const [editDeadline, setEditDeadline] = useState(task.deadline ? task.deadline.slice(0, 16) : '');
+  const [editAssignee, setEditAssignee] = useState(task.assignee_id ?? '');
 
   const isLead = LEAD_AND_ABOVE.includes(role ?? 'member' as any);
+  const canModify = isLead || (user?.id === task.created_by);
   const isMember = role === 'member';
   const canSubmit = isMember && task.status === 'in_progress';
+
+  // Fetch users for assignee dropdown
+  const { data: users = [] } = useQuery<User[]>({
+    queryKey: ['users', domainId],
+    queryFn: () => api.get(`/users${domainId ? `?domain_id=${domainId}` : ''}`).then(r => r.data),
+    enabled: editing && !!role,
+  });
 
   const updateMutation = useMutation({
     mutationFn: (data: Partial<Task>) => api.patch(`/tasks/${task.id}`, data),
@@ -145,8 +140,30 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     onError: (err: Error) => toast(err.message, 'error'),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: () => api.delete(`/tasks/${task.id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      toast('Task deleted', 'success');
+      onClose();
+    },
+    onError: (err: Error) => toast(err.message, 'error'),
+  });
+
   function handleSaveEdit() {
-    updateMutation.mutate({ title: editTitle, priority: editPriority });
+    updateMutation.mutate({
+      title: editTitle,
+      description: editDesc,
+      priority: editPriority,
+      deadline: editDeadline || null,
+      assignee_id: editAssignee || null,
+    });
+  }
+
+  function handleDelete() {
+    if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
+      deleteMutation.mutate();
+    }
   }
 
   const statusBadgeClass = `badge badge-${task.status}`;
@@ -154,151 +171,155 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal-panel"
-        style={{ width: '100%', maxWidth: '720px', maxHeight: '90vh' }}
-        onClick={e => e.stopPropagation()}
-      >
+      <div className="modal-panel glass" style={{ width: '100%', maxWidth: '800px', maxHeight: '95vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+        
         {/* Header */}
-        <div style={{
-          padding: '20px 24px 16px',
-          borderBottom: '1px solid var(--color-border-subtle)',
-          display: 'flex', alignItems: 'flex-start', gap: '12px',
-        }}>
-          <div style={{ flex: 1 }}>
+        <div style={{ padding: '24px', borderBottom: '1px solid var(--color-border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(255,255,255,0.02)' }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span className={statusBadgeClass}>{statusLabel}</span>
+              <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>ID: {task.id.slice(0, 8)}</span>
+            </div>
             {editing ? (
               <input
                 className="form-input"
                 value={editTitle}
                 onChange={e => setEditTitle(e.target.value)}
-                style={{ fontSize: '16px', fontWeight: 600 }}
-                maxLength={120}
-                id="task-title-edit"
+                style={{ fontSize: '20px', fontWeight: 700, width: '100%', padding: '8px 0', border: 'none', background: 'transparent', outline: 'none' }}
+                placeholder="Task Title"
+                autoFocus
               />
             ) : (
-              <h2 style={{ fontSize: '16px', fontWeight: 600 }}>{task.title}</h2>
+              <h2 style={{ fontSize: '20px', fontWeight: 700 }}>{task.title}</h2>
             )}
-            <div style={{ display: 'flex', gap: '10px', marginTop: '6px', alignItems: 'center' }}>
-              <span className={statusBadgeClass}>{statusLabel}</span>
-              {task.project?.name && (
-                <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-                  {task.project.name}
-                </span>
-              )}
-            </div>
           </div>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {isLead && !editing && (
-              <button className="btn btn-sm btn-secondary" onClick={() => setEditing(true)}>
-                Edit
+          <div style={{ display: 'flex', gap: '10px' }}>
+            {canModify && !editing && (
+              <button className="btn btn-secondary btn-sm" onClick={() => setEditing(true)} style={{ gap: '6px' }}>
+                <Edit3 size={14} /> Edit
               </button>
             )}
-            {editing && (
-              <>
-                <button className="btn btn-sm btn-primary" onClick={handleSaveEdit} disabled={updateMutation.isPending} style={{ minWidth: '80px' }}>
-                  {updateMutation.isPending ? <Loader2 className="animate-spin" size={14} /> : 'Save'}
-                </button>
-                <button className="btn btn-sm btn-secondary" onClick={() => setEditing(false)}>
-                  Cancel
-                </button>
-              </>
-            )}
-            <button className="btn-ghost btn-icon" onClick={onClose} style={{ fontSize: '18px' }}>×</button>
+            <button className="btn-ghost btn-icon" onClick={onClose}>×</button>
           </div>
         </div>
 
-        {/* Split Body */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden', minHeight: 0 }}>
-          {/* Left panel — 60% */}
-          <div style={{
-            flex: '0 0 60%', borderRight: '1px solid var(--color-border-subtle)',
-            padding: '20px 24px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px',
-          }}>
-            {/* Description */}
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                Description
-              </div>
-              {task.description
-                ? <div style={{ fontSize: '14px', lineHeight: 1.6, color: 'var(--color-text-secondary)' }}
-                    dangerouslySetInnerHTML={{ __html: task.description }} />
-                : <span style={{ fontSize: '13px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>No description</span>
-              }
-            </div>
-
-            {/* Priority */}
-            <div>
-              <div style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
-                Priority
-              </div>
-              {editing ? (
-                <div className="priority-toggle">
-                  {PRIORITY_OPTIONS.map(p => (
-                    <button
-                      key={p.value}
-                      className={`priority-toggle-btn ${editPriority === p.value ? `active-${p.value}` : ''}`}
-                      onClick={() => setEditPriority(p.value)}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span className={`priority-dot priority-dot-${task.priority}`} />
-                  <span style={{ fontSize: '13px', textTransform: 'capitalize' }}>{task.priority}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Metadata grid */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px',
-              background: 'var(--color-surface-raised)',
-              borderRadius: 'var(--radius-sm)',
-              padding: '14px',
-            }}>
-              {[
-                { label: 'Assignee', value: task.assignee?.full_name ?? 'Unassigned' },
-                { label: 'Deadline', value: task.deadline ? format(new Date(task.deadline), 'MMM d, yyyy HH:mm') : 'No deadline' },
-                { label: 'Created by', value: task.creator?.full_name ?? '—' },
-                { label: 'Created', value: format(new Date(task.created_at), 'MMM d, yyyy') },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <div style={{ fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--color-text-muted)', marginBottom: '3px' }}>
-                    {label}
+        {/* Scrollable Content */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          
+          {/* Main Details Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '32px' }}>
+            
+            {/* Left: Description and Modifiable content */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              <div>
+                <h3 style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '12px', letterSpacing: '0.5px' }}>
+                  Description
+                </h3>
+                {editing ? (
+                  <textarea
+                    className="form-input"
+                    value={editDesc}
+                    onChange={e => setEditDesc(e.target.value)}
+                    style={{ minHeight: '180px', width: '100%', fontSize: '14px', lineHeight: '1.6' }}
+                    placeholder="Provide details about this task..."
+                  />
+                ) : (
+                  <div style={{ fontSize: '15px', lineHeight: 1.6, color: 'var(--color-text-secondary)' }}>
+                    {task.description ? (
+                      <div dangerouslySetInnerHTML={{ __html: task.description.replace(/\n/g, '<br/>') }} />
+                    ) : (
+                      <span style={{ fontStyle: 'italic', color: 'var(--color-text-muted)' }}>No description provided.</span>
+                    )}
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)' }}>{value}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Metadata sidebar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              
+              {/* Priority */}
+              <div className="card glass-subtle" style={{ padding: '16px' }}>
+                <h3 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)', marginBottom: '10px' }}>Priority</h3>
+                {editing ? (
+                  <select className="form-input" value={editPriority} onChange={e => setEditPriority(e.target.value as TaskPriority)}>
+                    {PRIORITY_OPTIONS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  </select>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className={`priority-dot priority-dot-${task.priority}`} />
+                    <span style={{ fontSize: '14px', textTransform: 'capitalize', fontWeight: 500 }}>{task.priority}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Assignee */}
+              <div className="card glass-subtle" style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                  <UserIcon size={14} color="var(--color-text-muted)" />
+                  <h3 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>Assignee</h3>
                 </div>
-              ))}
+                {editing ? (
+                  <select className="form-input" value={editAssignee} onChange={e => setEditAssignee(e.target.value)}>
+                    <option value="">Unassigned</option>
+                    {users.map(u => <option key={u.id} value={u.id}>{u.full_name}</option>)}
+                  </select>
+                ) : (
+                  <div style={{ fontSize: '14px', fontWeight: 500 }}>{task.assignee?.full_name ?? 'Not assigned'}</div>
+                )}
+              </div>
+
+              {/* Deadline */}
+              <div className="card glass-subtle" style={{ padding: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                  <Clock size={14} color="var(--color-text-muted)" />
+                  <h3 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: 'var(--color-text-muted)' }}>Deadline</h3>
+                </div>
+                {editing ? (
+                  <input type="datetime-local" className="form-input" value={editDeadline} onChange={e => setEditDeadline(e.target.value)} />
+                ) : (
+                  <div style={{ fontSize: '14px', fontWeight: 500, color: task.is_overdue ? 'var(--color-overdue)' : 'inherit' }}>
+                    {task.deadline ? format(new Date(task.deadline), 'MMM d, yyyy HH:mm') : 'None'}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Right panel — 40% */}
-          <div style={{
-            flex: '0 0 40%', padding: '20px 20px', overflowY: 'auto',
-            display: 'flex', flexDirection: 'column',
-          }}>
-            <MessageThread taskId={task.id} />
-          </div>
+          <hr style={{ border: 'none', borderTop: '1px solid var(--color-border-subtle)' }} />
+
+          {/* Discussion Section */}
+          <MessageThread taskId={task.id} />
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: '14px 24px',
-          borderTop: '1px solid var(--color-border-subtle)',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        }}>
-          <span className={statusBadgeClass}>{statusLabel}</span>
-          {canSubmit && (
-            <button
-              id="task-submit-btn"
-              className="btn btn-primary"
-              onClick={onSubmit}
-            >
-              Submit Proof of Work
-            </button>
-          )}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--color-border-subtle)', background: 'rgba(255,255,255,0.02)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            {editing ? (
+              <button className="btn btn-sm" onClick={handleDelete} disabled={deleteMutation.isPending} style={{ color: 'var(--color-overdue)', gap: '6px', background: 'rgba(239,68,68,0.1)' }}>
+                <Trash2 size={14} /> Delete Task
+              </button>
+            ) : (
+              <span style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                Created {format(new Date(task.created_at), 'MMM d, yyyy')} by {task.creator?.full_name}
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {editing ? (
+              <>
+                <button className="btn btn-secondary" onClick={() => setEditing(false)}>Cancel</button>
+                <button className="btn btn-primary" onClick={handleSaveEdit} disabled={updateMutation.isPending} style={{ minWidth: '100px' }}>
+                  {updateMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Save Changes'}
+                </button>
+              </>
+            ) : (
+              canSubmit && (
+                <button className="btn btn-primary" onClick={onSubmit}>Submit Proof of Work</button>
+              )
+            )}
+          </div>
         </div>
       </div>
     </div>

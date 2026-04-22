@@ -12,10 +12,10 @@ EXEC_ROLES = ("president", "vp", "secretary")
 @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def create_user(body: UserCreate):
     sb = get_supabase_admin()
-    user_data = body.model_dump(exclude_none=True)
+    user_data = body.model_dump(exclude={"is_approved"}, exclude_none=True)
     
-    first_user_check = sb.table("users").select("id").limit(1).execute()
-    is_first_user = len(first_user_check.data) == 0
+    count_res = sb.table("users").select("id", count="exact").execute()
+    is_first_user = (count_res.count or 0) == 0
 
     if is_first_user:
         user_data["is_approved"] = True
@@ -29,10 +29,14 @@ async def create_user(body: UserCreate):
     return result.data[0]
 
 
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+
 @router.get("/", response_model=list[UserOut])
 async def list_users(
     is_approved: Optional[bool] = None,
     domain_id: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
     current_user: dict = Depends(get_current_user),
 ):
     sb = get_supabase_admin()
@@ -50,7 +54,7 @@ async def list_users(
         else:
             query = query.eq("id", current_user["id"])
 
-    result = query.order("created_at", desc=True).execute()
+    result = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     return result.data or []
 
 
@@ -72,10 +76,11 @@ async def update_user(
     sb = get_supabase_admin()
     updates = body.model_dump(exclude_none=True)
 
-    # Non-execs cannot change role or approval status
+    # Non-execs cannot change role or approval status or domain
     if current_user["role"] not in EXEC_ROLES:
         updates.pop("role", None)
         updates.pop("is_approved", None)
+        updates.pop("domain_id", None)
 
     result = sb.table("users").update(updates).eq("id", user_id).execute()
     if not result.data:

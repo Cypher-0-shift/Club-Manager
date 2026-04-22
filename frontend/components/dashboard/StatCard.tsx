@@ -3,6 +3,7 @@
 import { Task, TaskStatus } from '@/types';
 
 import { CountUp } from '@/components/ui/CountUp';
+import { motion } from 'framer-motion';
 
 interface StatCardProps {
   label: string;
@@ -13,13 +14,17 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub, accent }: StatCardProps) {
   return (
-    <div className="stat-card">
+    <motion.div 
+      className="stat-card"
+      whileHover={{ scale: 1.02 }}
+      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+    >
       <span className="stat-label">{label}</span>
       <span className="stat-value" style={accent ? { color: accent } : undefined}>
         {typeof value === 'number' ? <CountUp to={value} /> : value}
       </span>
       {sub && <span className="stat-sub">{sub}</span>}
-    </div>
+    </motion.div>
   );
 }
 

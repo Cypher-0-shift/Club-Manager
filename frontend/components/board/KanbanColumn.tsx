@@ -41,7 +41,7 @@ export function KanbanColumn({ status, tasks, onTaskClick, onAddTask, canAdd }: 
   return (
     <div
       ref={setNodeRef}
-      className={`kanban-column ${isOverdue ? 'kanban-column-overdue' : ''}`}
+      className={`kanban-column glass-subtle ${isOverdue ? 'kanban-column-overdue' : ''}`}
       style={{
         boxShadow: isOver ? `inset 0 0 0 2px ${COLUMN_COLORS[status]}` : undefined,
         transition: 'box-shadow 0.15s',

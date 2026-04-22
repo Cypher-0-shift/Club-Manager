@@ -124,6 +124,30 @@ input, textarea, select {
   clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
 }
 
+/* Glass card — use on cards overlaid over content (modals, sidebars) */
+.glass {
+  background: rgba(24, 24, 31, 0.72);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Lighter glass for inner panels */
+.glass-subtle {
+  background: rgba(24, 24, 31, 0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Domain-tinted glass — pass color via CSS variable */
+.glass-domain {
+  background: color-mix(in srgb, var(--domain-color, #6366f1) 6%, rgba(24,24,31,0.8));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid color-mix(in srgb, var(--domain-color, #6366f1) 18%, transparent);
+}
+
 /* ════════════════════════════════════════
    AUTH BACKGROUND — gradient mesh (Section 4.9)
    ════════════════════════════════════════ */
@@ -360,7 +384,11 @@ input, textarea, select {
 }
 
 .kanban-column-overdue {
-  background: rgba(239,68,68,0.04);
+  background: linear-gradient(
+    180deg,
+    rgba(220, 38, 38, 0.04) 0%,
+    rgba(15, 15, 19, 0) 40%
+  );
   border-color: rgba(239,68,68,0.2);
 }
 
@@ -862,3 +890,35 @@ tbody tr:hover td {
   font-size: 13px;
   color: var(--color-text-secondary);
 }
+
+/* ════════════════════════════════════════
+   LOADING UTILITIES
+   ════════════════════════════════════════ */
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.spinner {
+  width: 36px; height: 36px;
+  border: 3px solid var(--color-border);
+  border-top-color: var(--color-brand);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.animate-spin { animation: spin 1s linear infinite; }
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface-raised) 25%,
+    var(--color-surface-hover) 50%,
+    var(--color-surface-raised) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+}
+
