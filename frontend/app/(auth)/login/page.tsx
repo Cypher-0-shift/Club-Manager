@@ -25,6 +25,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
 
+  const [view, setView] = useState<'admin' | 'member'>('admin');
+
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
@@ -55,7 +57,7 @@ export default function LoginPage() {
       }
 
       setUser(userRow as User);
-      toast('Welcome back!', 'success');
+      toast(`Welcome back to the ${userRow.role === 'member' ? 'Member' : 'Admin'} Panel!`, 'success');
       router.push('/dashboard');
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Login failed', 'error');
@@ -64,6 +66,8 @@ export default function LoginPage() {
     }
   }
 
+  const isMember = view === 'member';
+
   return (
     <div className="auth-bg">
       <motion.div
@@ -71,7 +75,10 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
-        style={{ position: 'relative' }}
+        style={{ 
+          position: 'relative',
+          borderTop: `4px solid ${isMember ? 'var(--color-completed)' : 'var(--color-brand)'}`
+        }}
       >
         <button
           onClick={() => router.push('/')}
@@ -86,18 +93,61 @@ export default function LoginPage() {
         >
           <X size={20} />
         </button>
+
+        {/* Panel Switcher */}
+        <div style={{ 
+          display: 'flex', 
+          background: 'var(--color-surface-hover)', 
+          padding: '4px', 
+          borderRadius: '10px', 
+          marginBottom: '24px',
+          gap: '4px'
+        }}>
+          <button 
+            type="button"
+            onClick={() => setView('admin')}
+            style={{
+              flex: 1, padding: '8px', borderRadius: '7px', fontSize: '13px', fontWeight: 600,
+              background: !isMember ? 'var(--color-surface)' : 'transparent',
+              color: !isMember ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              boxShadow: !isMember ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Admin Panel
+          </button>
+          <button 
+            type="button"
+            onClick={() => setView('member')}
+            style={{
+              flex: 1, padding: '8px', borderRadius: '7px', fontSize: '13px', fontWeight: 600,
+              background: isMember ? 'var(--color-surface)' : 'transparent',
+              color: isMember ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              boxShadow: isMember ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.2s'
+            }}
+          >
+            Member Panel
+          </button>
+        </div>
+
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{
             width: '44px', height: '44px',
-            background: 'var(--color-brand)',
+            background: isMember ? 'var(--color-completed)' : 'var(--color-brand)',
             borderRadius: '12px',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '20px', fontWeight: 700, color: '#fff',
             margin: '0 auto 12px',
-          }}>C</div>
-          <h1 style={{ fontSize: '20px', fontWeight: 700 }}>Club Task Manager</h1>
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>Sign in to your account</p>
+            transition: 'background 0.3s'
+          }}>{isMember ? 'M' : 'C'}</div>
+          <h1 style={{ fontSize: '20px', fontWeight: 700 }}>
+            {isMember ? 'Member Workspace' : 'Club Administration'}
+          </h1>
+          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+            {isMember ? 'Access your tasks and board' : 'Manage domains, users and projects'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>

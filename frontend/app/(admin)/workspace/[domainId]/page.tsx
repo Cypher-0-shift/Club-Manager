@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { useAuthHydration } from '@/hooks/useAuthHydration';
 import { useToast } from '@/components/ui/Toast';
 import { useRouter } from 'next/navigation';
+import { hexToRgba } from '@/lib/utils';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
 import { TaskModal } from '@/components/tasks/TaskModal';
 
@@ -229,7 +230,11 @@ export default function DomainWorkspacePage({ params }: Props) {
 
   return (
     <AppShell>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+      <div style={{ 
+        display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100%',
+        background: domainColor ? `radial-gradient(ellipse at 0% 0%, ${hexToRgba(domainColor, 0.07)} 0%, transparent 50%), var(--color-bg)` : 'var(--color-bg)',
+        margin: '-24px', padding: '24px' // Negate AppShell padding to let gradient bleed
+      }}>
 
         {/* Back + header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>

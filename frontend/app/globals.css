@@ -456,7 +456,27 @@ input, textarea, select {
 .task-card:hover {
   border-color: var(--color-border);
   box-shadow: var(--shadow-sm);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+}
+
+.task-card.is-overdue {
+  border-left: 3px solid var(--color-overdue);
+  background: rgba(220,38,38,0.05);
+}
+
+.kanban-column.overdue .kanban-header {
+  border-bottom: 2px solid var(--color-overdue);
+}
+
+.overdue-count-badge {
+  background: var(--color-overdue);
+  color: #fff;
+  animation: pulse-badge 2s ease-in-out infinite;
+}
+
+@keyframes pulse-badge {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .task-card-overdue {
@@ -776,16 +796,17 @@ tbody tr:hover td {
 .domain-card {
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
-  border-top-width: 3px;
+  border-top: 3px solid var(--domain-color, var(--color-brand));
   border-radius: var(--radius-md);
   padding: 16px;
   cursor: pointer;
   transition: box-shadow 0.15s, transform 0.1s;
+  backdrop-filter: blur(8px);
 }
 
 .domain-card:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--domain-shadow, rgba(99,102,241,0.2));
 }
 
 .domain-name {

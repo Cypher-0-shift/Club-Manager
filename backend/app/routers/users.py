@@ -11,18 +11,14 @@ EXEC_ROLES = ("president", "vp", "secretary")
 
 @router.post("/", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 async def create_user(body: UserCreate):
+    ALLOWED_SIGNUP_ROLES = {'vp', 'secretary', 'lead', 'member'}
+    if body.role not in ALLOWED_SIGNUP_ROLES:
+        raise HTTPException(status_code=422, detail="Invalid role for signup")
+
     sb = get_supabase_admin()
     user_data = body.model_dump(exclude={"is_approved"}, exclude_none=True)
     
-    # Check if there's any approved president yet
-    pres_res = sb.table("users").select("id").eq("role", "president").eq("is_approved", True).execute()
-    has_president = len(pres_res.data) > 0
-
-    if not has_president:
-        user_data["is_approved"] = True
-        user_data["role"] = "president"
-    else:
-        user_data["is_approved"] = False
+    user_data["is_approved"] = False
     
     result = sb.table("users").insert(user_data).execute()
     if not result.data:
@@ -70,21 +66,42 @@ async def update_user(
     body: UserUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-    # Only execs can update others; self can update own profile fields
-    if user_id != current_user["id"] and current_user["role"] not in EXEC_ROLES:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not permitted")
-
     sb = get_supabase_admin()
-    updates = body.model_dump(exclude_none=True)
-
-    # Non-execs cannot change role or approval status or domain
-    if current_user["role"] not in EXEC_ROLES:
-        updates.pop("role", None)
-        updates.pop("is_approved", None)
-        updates.pop("domain_id", None)
-
-    result = sb.table("users").update(updates).eq("id", user_id).execute()
-    if not result.data:
+    target_user = sb.table("users").select("domain_id").eq("id", user_id).single().execute()
+    if not target_user.data:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    updates = body.model_dump(exclude_none=True)
+
+    if user_id != current_user["id"]:
+        if current_user["role"] not in ["president", "vp", "secretary", "lead"]:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not permitted to update others")
+        
+        # Non-presidents can only update users in their own domain
+        if current_user["role"] != "president":
+            if target_user.data.get("domain_id") != current_user.get("domain_id"):
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot update users outside your domain")
+
+    # Role changes
+    if "role" in updates:
+        if current_user["role"] != "president":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only president can change roles")
+        if user_id == current_user["id"]:
+            updates.pop("role")
+            if not updates:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot change your own role")
+
+    # is_approved changes
+    if "is_approved" in updates:
+        if current_user["role"] not in ["president", "vp", "secretary", "lead"]:
+            updates.pop("is_approved")
+
+    # Non-execs cannot change domain_id
+    if "domain_id" in updates and current_user["role"] not in EXEC_ROLES:
+        updates.pop("domain_id")
+
+    if not updates:
+        return target_user.data
+
+    result = sb.table("users").update(updates).eq("id", user_id).execute()
     return result.data[0]

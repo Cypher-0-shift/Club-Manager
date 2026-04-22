@@ -81,7 +81,7 @@ async def delete_project(
     project_id: str,
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user["role"] not in EXEC_ROLES:
-        raise HTTPException(status_code=403, detail="Only executives can delete projects")
+    if current_user["role"] != "president":
+        raise HTTPException(status_code=403, detail="Only president can delete projects")
     sb = get_supabase_admin()
     sb.table("projects").delete().eq("id", project_id).execute()

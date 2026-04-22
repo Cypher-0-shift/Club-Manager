@@ -1,7 +1,7 @@
 import os
 from supabase import create_client
 
-def create_president():
+def create_member():
     env_path = os.path.join(os.path.dirname(__file__), ".env")
     url = ""
     key = ""
@@ -18,16 +18,13 @@ def create_president():
 
     sb = create_client(url, key)
 
-    email = "admin@test.com"
+    email = "member@test.com"
     password = "password123"
-    full_name = "Rohit President"
+    full_name = "Alice Member"
 
     try:
         # Check if user already exists in auth
-        # Note: list_users is paged, so we filter by email if possible or just try-catch
         user_id = None
-        
-        # We try to create first, but if it fails we find the user
         try:
             res = sb.auth.admin.create_user({
                 "email": email,
@@ -40,30 +37,34 @@ def create_president():
         except Exception as e:
             if "already been registered" in str(e):
                 print(f"User {email} already exists in Auth. Linking...")
-                # Fetch existing user
                 users_list = sb.auth.admin.list_users()
                 existing_user = next((u for u in users_list if u.email == email), None)
                 if existing_user:
                     user_id = existing_user.id
                 else:
-                    raise Exception(f"Could not find existing user {email} even though Auth said it exists.")
+                    raise Exception(f"Could not find existing user {email}")
             else:
                 raise e
 
         if user_id:
-            # Upsert in public.users to ensure role is correct
+            # Get a domain ID to assign (first one found)
+            domains = sb.table("domains").select("id").limit(1).execute()
+            domain_id = domains.data[0]["id"] if domains.data else None
+            
+            # Upsert in public.users
             sb.table("users").upsert({
                 "id": user_id,
                 "email": email,
                 "full_name": full_name,
-                "role": "president",
+                "role": "member",
+                "domain_id": domain_id,
                 "is_approved": True
             }).execute()
-            print(f"Updated public.user: {user_id} as President! [OK]")
-            print(f"\nDetails:\nEmail: {email}\nPassword: {password}")
+            print(f"Updated public.user: {user_id} as Member! [OK]")
+            print(f"\nLogin now with:\nEmail: {email}\nPassword: {password}")
         
     except Exception as e:
         print("Error:", e)
 
 if __name__ == "__main__":
-    create_president()
+    create_member()

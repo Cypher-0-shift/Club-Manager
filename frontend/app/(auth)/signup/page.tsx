@@ -26,7 +26,6 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
-  { value: 'president', label: 'President' },
   { value: 'vp', label: 'Vice President' },
   { value: 'secretary', label: 'Secretary' },
   { value: 'lead', label: 'Domain Lead' },
@@ -39,22 +38,12 @@ export default function SignupPage() {
   const { setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
-  const [isPresidentSetup, setIsPresidentSetup] = useState(false);
 
   const { register, handleSubmit, watch, control, formState: { errors }, setValue } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: { role: 'member' },
   });
 
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('role') === 'president') {
-        setIsPresidentSetup(true);
-        setValue('role', 'president');
-      }
-    }
-  }, [setValue]);
 
   const selectedRole = watch('role');
   const needsDomain = !EXEC_ROLES.includes(selectedRole as UserRole);
@@ -134,10 +123,10 @@ export default function SignupPage() {
             margin: '0 auto 12px',
           }}>C</div>
           <h1 style={{ fontSize: '20px', fontWeight: 700 }}>
-            {isPresidentSetup ? 'Create President Account' : 'Request Access'}
+            Request Access
           </h1>
           <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
-            {isPresidentSetup ? 'Set up your club space' : 'Your account will be reviewed by a club officer'}
+            Your account will be reviewed by a club officer
           </p>
         </div>
 
@@ -175,7 +164,7 @@ export default function SignupPage() {
             {errors.password && <span className="form-error">{errors.password.message}</span>}
           </div>
 
-          {!isPresidentSetup && (
+
             <div className="form-group">
               <label className="form-label">Role</label>
               <Controller
@@ -191,7 +180,7 @@ export default function SignupPage() {
               />
               {errors.role && <span className="form-error">{errors.role.message}</span>}
             </div>
-          )}
+
 
           {needsDomain && (
             <div className="form-group">
@@ -219,7 +208,7 @@ export default function SignupPage() {
             disabled={loading}
             style={{ marginTop: '8px' }}
           >
-            {loading ? 'Submitting…' : isPresidentSetup ? 'Create Account' : 'Request Access'}
+            {loading ? 'Submitting…' : 'Request Access'}
           </button>
         </form>
 

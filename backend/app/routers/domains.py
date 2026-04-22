@@ -26,8 +26,8 @@ async def create_domain(
     body: DomainCreate,
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user["role"] not in EXEC_ROLES:
-        raise HTTPException(status_code=403, detail="Only executives can create domains")
+    if current_user["role"] != "president":
+        raise HTTPException(status_code=403, detail="Only president can create domains")
     sb = get_supabase_admin()
     result = sb.table("domains").insert(body.model_dump()).execute()
     if not result.data:
@@ -50,8 +50,8 @@ async def update_domain(
     body: DomainUpdate,
     current_user: dict = Depends(get_current_user),
 ):
-    if current_user["role"] not in EXEC_ROLES:
-        raise HTTPException(status_code=403, detail="Only executives can update domains")
+    if current_user["role"] != "president":
+        raise HTTPException(status_code=403, detail="Only president can update domains")
     sb = get_supabase_admin()
     updates = body.model_dump(exclude_none=True)
     result = sb.table("domains").update(updates).eq("id", domain_id).execute()

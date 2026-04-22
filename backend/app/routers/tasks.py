@@ -182,6 +182,58 @@ async def create_task(
 
 
 # ─────────────────────────────────────────────
+# Analytics
+# ─────────────────────────────────────────────
+@router.get("/analytics/me", response_model=dict)
+async def get_my_analytics(current_user: dict = Depends(get_current_user)):
+    sb = get_supabase_admin()
+    tasks = sb.table('tasks').select('*').eq('assignee_id', current_user['id']).execute()
+    submissions = sb.table('submissions').select('*, task:tasks(title)').eq('submitted_by', current_user['id']).order('created_at', desc=True).execute()
+
+    t_data = tasks.data or []
+    total = len(t_data)
+    completed = len([t for t in t_data if t['status'] == 'completed'])
+    overdue = len([t for t in t_data if t['status'] == 'overdue' or t.get('is_overdue')])
+    
+    by_status = {}
+    for t in t_data:
+        s = t['status']
+        by_status[s] = by_status.get(s, 0) + 1
+        
+    by_priority = {}
+    for t in t_data:
+        p = t['priority']
+        by_priority[p] = by_priority.get(p, 0) + 1
+
+    return {
+        'total': total,
+        'completed': completed,
+        'overdue': overdue,
+        'by_status': by_status,
+        'by_priority': by_priority,
+        'completion_rate': round((completed / total) * 100) if total > 0 else 0,
+        'submissions': submissions.data or []
+    }
+
+@router.get("/analytics/org", response_model=dict)
+async def get_org_analytics(current_user: dict = Depends(get_current_user)):
+    if current_user["role"] not in EXEC_ROLES:
+        raise HTTPException(status_code=403, detail="Only executives can view org analytics")
+    sb = get_supabase_admin()
+    tasks = sb.table('tasks').select('*').execute()
+    
+    t_data = tasks.data or []
+    total = len(t_data)
+    completed = len([t for t in t_data if t['status'] == 'completed'])
+    
+    return {
+        'total': total,
+        'completed': completed,
+        'completion_rate': round((completed / total) * 100) if total > 0 else 0,
+    }
+
+
+# ─────────────────────────────────────────────
 # Get single task
 # ─────────────────────────────────────────────
 @router.get("/{task_id}", response_model=dict)
@@ -213,8 +265,13 @@ async def update_task(
         raise HTTPException(status_code=404, detail="Task not found")
 
     # Permission check
-    if current_user["role"] == "member" and task.data.get("assignee_id") != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Not permitted")
+    if current_user["role"] == "member":
+        if task.data.get("assignee_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not permitted")
+    elif current_user["role"] != "president":
+        proj = sb.table("projects").select("domain_id").eq("id", task.data["project_id"]).single().execute()
+        if proj.data and proj.data.get("domain_id") != current_user.get("domain_id"):
+            raise HTTPException(status_code=403, detail="Cannot edit task in another domain")
 
     updates = body.model_dump(exclude_none=True)
     if "deadline" in updates and updates["deadline"]:
@@ -258,8 +315,18 @@ async def update_task_status(
         raise HTTPException(status_code=400, detail="Overdue tasks cannot be moved to in_progress")
 
     # Members can only update their own tasks
-    if current_user["role"] == "member" and t.get("assignee_id") != current_user["id"]:
-        raise HTTPException(status_code=403, detail="Not permitted")
+    if current_user["role"] == "member":
+        if t.get("assignee_id") != current_user["id"]:
+            raise HTTPException(status_code=403, detail="Not permitted")
+    elif current_user["role"] != "president":
+        proj = sb.table("projects").select("domain_id").eq("id", t["project_id"]).single().execute()
+        if proj.data and proj.data.get("domain_id") != current_user.get("domain_id"):
+            raise HTTPException(status_code=403, detail="Cannot edit task status in another domain")
+
+    if body.status == 'completed':
+        sub = sb.table('submissions').select('id').eq('task_id', task_id).limit(1).execute()
+        if not sub.data:
+            raise HTTPException(status_code=422, detail='Submit proof before marking as Completed')
 
     result = sb.table("tasks").update({"status": body.status}).eq("id", task_id).execute()
 
@@ -396,5 +463,13 @@ async def send_message(
 async def delete_task(task_id: str, current_user: dict = Depends(get_current_user)):
     if current_user["role"] not in LEAD_AND_ABOVE:
         raise HTTPException(status_code=403, detail="Only leads and above can delete tasks")
+        
     sb = get_supabase_admin()
+    if current_user["role"] != "president":
+        task = sb.table("tasks").select("project_id").eq("id", task_id).single().execute()
+        if task.data:
+            proj = sb.table("projects").select("domain_id").eq("id", task.data["project_id"]).single().execute()
+            if proj.data and proj.data.get("domain_id") != current_user.get("domain_id"):
+                raise HTTPException(status_code=403, detail="Cannot delete task in another domain")
+
     sb.table("tasks").delete().eq("id", task_id).execute()

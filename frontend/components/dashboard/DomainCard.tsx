@@ -2,8 +2,8 @@
 
 import { Domain, Project, Task } from '@/types';
 import { useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { hexToRgba } from '@/lib/utils';
 
 interface DomainCardProps {
   domain: Domain;
@@ -24,7 +24,10 @@ export function DomainCard({ domain, tasks, projects }: DomainCardProps) {
   return (
     <div
       className="domain-card"
-      style={{ borderTopColor: domain.color_hex }}
+      style={{ 
+        '--domain-color': domain.color_hex || '#6366f1',
+        '--domain-shadow': hexToRgba(domain.color_hex || '#6366f1', 0.2)
+      } as any}
       onClick={() => router.push(`/workspace/${domain.id}`)}
     >
       <div className="domain-name">{domain.name}</div>

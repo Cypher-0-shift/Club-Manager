@@ -306,14 +306,11 @@ export default function LandingPage() {
           gap: '12px',
         }}>
           <h3 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            Using it for the first time?
+            First Time Setup?
           </h3>
-          <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', maxWidth: '400px' }}>
-            Set up the entire club hierarchy by creating a president account from scratch.
+          <p style={{ fontSize: '14px', color: 'var(--color-text-secondary)', maxWidth: '400px', textAlign: 'center' }}>
+            Run <code style={{ background: 'rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '4px' }}>backend/create_president.py</code> to bootstrap the President account.
           </p>
-          <a href="/signup?role=president" className="btn btn-primary">
-            Create a President Account
-          </a>
         </div>
 
         {/* Footer */}

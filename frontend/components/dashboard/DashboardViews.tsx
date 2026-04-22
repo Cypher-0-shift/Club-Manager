@@ -1,4 +1,8 @@
 'use client';
+// ── Legacy exports (unchanged) ──
+// New canonical split components live in:
+//   @/components/admin/AdminDashboard
+//   @/components/member/MemberDashboard
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -213,3 +217,7 @@ export function DashboardLead() {
     </div>
   );
 }
+
+// ── MOD-003: re-export the new split dashboard components ──
+export { AdminDashboard } from '@/components/admin/AdminDashboard';
+export { MemberDashboard } from '@/components/member/MemberDashboard';
