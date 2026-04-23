@@ -1,0 +1,111 @@
+'use client';
+
+import { Task, TaskStatus } from '@/types';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
+import { TaskCard } from './TaskCard';
+import { LayoutList } from 'lucide-react';
+
+const COLUMN_LABELS: Record<TaskStatus, string> = {
+  pending: 'Pending',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  overdue: 'Overdue',
+};
+
+const COLUMN_COLORS: Record<TaskStatus, string> = {
+  pending: 'var(--color-pending)',
+  in_progress: 'var(--color-brand)',
+  completed: 'var(--color-completed)',
+  overdue: 'var(--color-overdue)',
+};
+
+interface KanbanColumnProps {
+  status: TaskStatus;
+  tasks: Task[];
+  onTaskClick: (task: Task) => void;
+  onAddTask?: () => void;
+  canAdd?: boolean;
+}
+
+export function KanbanColumn({ status, tasks, onTaskClick, onAddTask, canAdd }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({ id: status });
+  const sortedTasks = [...tasks].sort((a, b) => {
+    if (a.is_pinned && !b.is_pinned) return -1;
+    if (!a.is_pinned && b.is_pinned) return 1;
+    return 0;
+  });
+
+  const isOverdue = status === 'overdue';
+
+  return (
+    <div
+      className={`kanban-column ${isOverdue ? 'kanban-column-overdue' : ''}`}
+      style={{ borderLeft: `2px solid ${COLUMN_COLORS[status]}` }}
+    >
+      {/* Header */}
+      <div className="kanban-header" style={{ 
+        background: 'rgba(255,255,255,0.02)',
+        borderBottom: '1px solid rgba(255,255,255,0.07)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span
+            style={{ width: '8px', height: '8px', borderRadius: '50%', background: COLUMN_COLORS[status] }}
+          />
+          <span className="kanban-title" style={{ color: 'var(--color-text-primary)' }}>{COLUMN_LABELS[status]}</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span className="kanban-count">{tasks.length}</span>
+          {canAdd && status !== 'overdue' && (
+            <button
+              className="btn btn-sm btn-ghost btn-icon"
+              onClick={onAddTask}
+              title="Add task"
+              style={{ fontSize: '16px', lineHeight: 1 }}
+            >
+              +
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Body */}
+      <div 
+        ref={setNodeRef}
+        className="kanban-body"
+        style={isOver ? {
+          outline: '2px dashed rgba(255,255,255,0.2)',
+          outlineOffset: '-2px',
+          background: 'rgba(255,255,255,0.02)',
+          transition: 'all 0.15s ease',
+          borderRadius: 'var(--radius-sm)'
+        } : undefined}
+      >
+        <SortableContext items={sortedTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+          {sortedTasks.length === 0
+            ? (
+              <div style={{
+                flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                gap: '12px', border: '2px dashed var(--color-border)', borderRadius: 'var(--radius-sm)',
+                padding: '32px 16px', color: 'var(--color-text-muted)', textAlign: 'center', cursor: canAdd ? 'pointer' : 'default',
+                transition: 'border-color 0.15s, color 0.15s'
+              }}
+              onClick={canAdd ? onAddTask : undefined}
+              onMouseEnter={(e) => { if(canAdd) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = 'rgba(255,255,255,0.3)'; } }}
+              onMouseLeave={(e) => { if(canAdd) { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'var(--color-text-muted)'; } }}
+              >
+                <LayoutList size={24} opacity={0.6} />
+                <span style={{ fontSize: '12px', fontWeight: 500 }}>
+                  {canAdd && status !== 'overdue' ? '+ Add your first task' : 'No tasks here'}
+                </span>
+              </div>
+            )
+            : sortedTasks.map(t => (
+                <TaskCard key={t.id} task={t} onClick={() => onTaskClick(t)} />
+              ))
+          }
+        </SortableContext>
+      </div>
+    </div>
+  );
+}
