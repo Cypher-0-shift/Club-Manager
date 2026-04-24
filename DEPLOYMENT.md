@@ -16,6 +16,8 @@ The backend is a FastAPI application located in the `/backend` directory.
     - `SUPABASE_SERVICE_KEY`: Your Supabase Service Role Key (Required for admin tasks).
     - `JWT_SECRET`: A secure random string for JWT.
     - `API_VERSION`: `v1`
+    - `ALLOWED_ORIGINS`: Your Vercel frontend URL (e.g., `https://club-manager-xi-six.vercel.app`).
+    - `FRONTEND_ORIGIN`: Same as above.
 
 ## 2. Frontend Deployment (Vercel)
 
@@ -29,12 +31,13 @@ The frontend is a Next.js application located in the `/frontend` directory.
 5.  Add the following **Environment Variables**:
     - `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase Project URL.
     - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase Anon Key.
-    - `NEXT_PUBLIC_API_URL`: The public URL of your Railway backend (e.g., `https://your-backend.up.railway.app/v1`).
+    - `NEXT_PUBLIC_API_URL`: The public URL of your Railway backend WITHOUT /v1 (e.g., `https://club-manager-production-f4cc.up.railway.app`).
+    - `API_URL`: Same as above (required for server-side routes).
 
 ## 3. Post-Deployment
 
 ### Update CORS
-Once your frontend is deployed, you must add its URL (e.g., `https://your-app.vercel.app`) to the `ALLOWED_ORIGINS` environment variable in Railway so the backend allows requests from it.
+Once your frontend is deployed, you must set the `ALLOWED_ORIGINS` environment variable in Railway to your Vercel URL (e.g., `https://club-manager-xi-six.vercel.app`) so the backend allows requests from it.
 
 ### Database Sync
 Ensure your Supabase database has all the migrations applied. You can use the SQL Editor in the Supabase dashboard to run the scripts in `supabase/migrations/`.

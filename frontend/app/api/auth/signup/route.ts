@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
     // Step 2: Call FastAPI to create org + upgrade role to president
     let fastApiResponse: Response;
     try {
-        fastApiResponse = await fetch(`${API_URL}/onboarding/create-president`, {
+        fastApiResponse = await fetch(`${API_URL}/v1/onboarding/create-president`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

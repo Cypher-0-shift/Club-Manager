@@ -2,7 +2,7 @@ import axios from 'axios';
 import { supabase } from './supabase';
 
 export const api = axios.create({
-  baseURL: 'http://localhost:8000/v1',  // server-side API_URL is only for route.ts
+  baseURL: process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/v1` : 'http://localhost:8000/v1',
   headers: { 'Content-Type': 'application/json' },
 });
 

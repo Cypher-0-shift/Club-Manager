@@ -72,20 +72,18 @@ class Settings(BaseSettings):
     def origins_list(self) -> list[str]:
         """
         Parse ALLOWED_ORIGINS and support wildcards.
-        
-        PHASE 3: Supports patterns like:
-        - http://localhost:3000
-        - https://*.vercel.app
-        - https://app.example.com
         """
-        origins = [o.strip() for o in self.ALLOWED_ORIGINS.split(',')]
+        raw_origins = [o.strip() for o in self.ALLOWED_ORIGINS.split(',')]
+        if self.FRONTEND_ORIGIN:
+            raw_origins.append(self.FRONTEND_ORIGIN.strip())
+            
+        origins = list(set(raw_origins)) # Unique origins
         
         # Convert wildcard patterns to regex
         processed_origins = []
         for origin in origins:
+            if not origin: continue
             if '*' in origin:
-                # Convert wildcard to regex pattern
-                # e.g., https://*.vercel.app -> https://.*\.vercel\.app
                 pattern = origin.replace('.', r'\.').replace('*', '.*')
                 processed_origins.append(re.compile(f"^{pattern}$"))
             else:
