@@ -28,7 +28,7 @@ export function MemberAnalytics() {
     by_priority: Record<string, number>;
     completion_rate: number;
     is_org_wide: boolean;
-    submissions: any[];
+    submissions: Submission[];
   }
 
   // 2. Fetch specialized member analytics data
@@ -176,7 +176,7 @@ export function MemberAnalytics() {
                 </td>
               </tr>
             ) : (
-              submissions.slice(0, 10).map((s: any) => (
+              submissions.slice(0, 10).map((s: Submission) => (
                 <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                   <td style={{ padding: '16px 24px', fontWeight: 500 }}>{s.tasks?.title || 'Unknown Task'}</td>
                   {is_org_wide && (

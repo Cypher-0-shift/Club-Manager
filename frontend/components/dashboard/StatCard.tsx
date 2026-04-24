@@ -28,11 +28,26 @@ export function StatCard({ label, value, sub, accent }: StatCardProps) {
   );
 }
 
-export function StatsRow({ tasks }: { tasks: Task[] }) {
-  const total     = tasks.length;
-  const completed = tasks.filter(t => t.status === 'completed').length;
-  const overdue   = tasks.filter(t => t.status === 'overdue' || t.is_overdue).length;
-  const inprogress = tasks.filter(t => t.status === 'in_progress').length;
+export function StatsRow({ tasks, customStats }: { tasks?: Task[]; customStats?: { label: string; value: number | string; trend?: string; accent?: string }[] }) {
+  if (customStats) {
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
+        gap: '16px',
+      }}>
+        {customStats.map((s, i) => (
+          <StatCard key={i} label={s.label} value={s.value} accent={s.accent} />
+        ))}
+      </div>
+    );
+  }
+
+  const taskList = tasks || [];
+  const total     = taskList.length;
+  const completed = taskList.filter(t => t.status === 'completed').length;
+  const overdue   = taskList.filter(t => t.status === 'overdue' || t.is_overdue).length;
+  const inprogress = taskList.filter(t => t.status === 'in_progress').length;
 
   return (
     <div style={{
@@ -59,9 +74,9 @@ export function StatusBadge({ status }: StatusBadgeProps) {
   return <span className={`badge badge-${status}`}>{labels[status]}</span>;
 }
 
-export function SkeletonCard() {
+export function SkeletonCard({ style }: { style?: React.CSSProperties }) {
   return (
-    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+    <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '10px', ...style }}>
       <div className="skeleton" style={{ height: '16px', width: '60%' }} />
       <div className="skeleton" style={{ height: '12px', width: '40%' }} />
       <div className="skeleton" style={{ height: '12px', width: '80%' }} />

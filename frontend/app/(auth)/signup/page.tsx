@@ -45,7 +45,9 @@ const ROLE_OPTIONS: { value: UserRole; label: string }[] = [
   { value: 'member', label: 'Member' },
 ];
 
-export default function SignupPage() {
+import { Suspense } from 'react';
+
+function SignupContent() {
   const router = useRouter();
   const { toast } = useToast();
   const { setUser } = useAppStore();
@@ -98,6 +100,7 @@ export default function SignupPage() {
   useEffect(() => {
     const container = particlesRef.current;
     if (!container) return;
+    container.innerHTML = '';
     for (let i = 0; i < 140; i++) {
       const p = document.createElement('div');
       p.className = 'sparkle';
@@ -120,7 +123,6 @@ export default function SignupPage() {
     setLoading(true);
     try {
       if (data.role === 'president') {
-        // ── President path: Next.js API route → FastAPI upgrade ──
         const res = await fetch('/api/auth/signup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -142,7 +144,6 @@ export default function SignupPage() {
           throw new Error(result.error ?? 'Account created but org setup failed');
         }
 
-        // Hydrate Supabase browser session from the token returned by route
         if (result.session) {
           await supabase.auth.setSession(result.session);
         }
@@ -151,7 +152,6 @@ export default function SignupPage() {
         router.push('/dashboard');
 
       } else {
-        // ── Non-president path: unchanged, goes directly through FastAPI ──
         const { error: signUpError, data: authData } = await supabase.auth.signUp({
           email: data.email,
           password: data.password,
@@ -192,11 +192,9 @@ export default function SignupPage() {
     <div style={{ minHeight: '100vh', background: '#000', color: '#fff', overflowX: 'hidden', position: 'relative', fontFamily: 'Satoshi, sans-serif' }}>
       <div ref={particlesRef} className="mask-radial" style={{ position: 'absolute', inset: 0, zIndex: 0, opacity: 0.3, pointerEvents: 'none' }} />
 
-      {/* Ambient glows */}
       <div style={{ position: 'absolute', top: 0, right: 0, width: '600px', height: '600px', background: 'rgba(14,165,233,0.10)', filter: 'blur(120px)', borderRadius: '50%', transform: 'translate(50%, -50%)', pointerEvents: 'none', zIndex: 0 }} />
       <div style={{ position: 'absolute', bottom: 0, left: 0, width: '600px', height: '600px', background: 'rgba(99,102,241,0.10)', filter: 'blur(120px)', borderRadius: '50%', transform: 'translate(-50%, 50%)', pointerEvents: 'none', zIndex: 0 }} />
 
-      {/* Nav */}
       <nav style={{ position: 'fixed', top: 0, left: 0, width: '100%', zIndex: 50, padding: '24px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ width: '32px', height: '32px', background: '#fff', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -222,20 +220,17 @@ export default function SignupPage() {
       <main style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', zIndex: 10, padding: '48px 16px' }}>
         <div style={{ width: '100%', maxWidth: '448px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
 
-          {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '16px' }}>
             <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.04em', marginBottom: '4px', lineHeight: 1.1 }}>
               {selectedRole === 'president' ? 'Create Your\nPresident Account' : 'Join Your\nOrganization'}
             </h1>
           </div>
 
-          {/* Form card */}
           <div style={{ width: '100%', padding: '20px', borderRadius: '20px', background: 'rgba(23,23,23,0.5)', border: '1px solid #262626', backdropFilter: 'blur(20px)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '-1px', left: 0, right: 0, height: '1px', background: 'linear-gradient(to right, transparent, rgba(99,102,241,0.5), transparent)' }} />
 
             <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-              {/* Full Name */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Full Name</label>
                 <input
@@ -249,7 +244,6 @@ export default function SignupPage() {
                 {errors.full_name && <span style={{ fontSize: '12px', color: '#ef4444' }}>{errors.full_name.message}</span>}
               </div>
 
-              {/* Email */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Email Address</label>
                 <input
@@ -264,7 +258,6 @@ export default function SignupPage() {
                 {errors.email && <span style={{ fontSize: '12px', color: '#ef4444' }}>{errors.email.message}</span>}
               </div>
 
-              {/* Password */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Password</label>
                 <div style={{ position: 'relative' }}>
@@ -298,7 +291,6 @@ export default function SignupPage() {
                     </svg>
                   </button>
                 </div>
-                {/* Password strength */}
                 <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
                   <div style={{ height: '4px', flex: 1, borderRadius: '999px', background: strength >= 1 ? '#6366f1' : '#262626', transition: 'all 0.3s' }} />
                   <div style={{ height: '4px', flex: 1, borderRadius: '999px', background: strength >= 2 ? '#6366f1' : '#262626', transition: 'all 0.3s' }} />
@@ -308,7 +300,6 @@ export default function SignupPage() {
                 {errors.password && <span style={{ fontSize: '12px', color: '#ef4444' }}>{errors.password.message}</span>}
               </div>
 
-              {/* Role */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Role</label>
                 <Controller
@@ -328,7 +319,6 @@ export default function SignupPage() {
                 />
               </div>
 
-              {/* Organization Name (President Only) */}
               {selectedRole === 'president' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Organization Name</label>
@@ -341,7 +331,6 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Join Code (Non-Presidents) */}
               {selectedRole !== 'president' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Organization Join Code</label>
@@ -355,7 +344,6 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Domain (conditional) */}
               {needsDomain && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>Domain</label>
@@ -379,7 +367,6 @@ export default function SignupPage() {
                 </div>
               )}
 
-              {/* Terms */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                 <input
                   type="checkbox"
@@ -400,7 +387,6 @@ export default function SignupPage() {
                 </label>
               </div>
 
-              {/* Submit */}
               <button
                 id="signup-submit"
                 type="submit"
@@ -493,5 +479,13 @@ export default function SignupPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>Loading...</div>}>
+      <SignupContent />
+    </Suspense>
   );
 }

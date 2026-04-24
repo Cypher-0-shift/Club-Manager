@@ -3,7 +3,7 @@
 export type UserRole = 'president' | 'vp' | 'secretary' | 'lead' | 'member';
 export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'overdue';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
-export type SubmissionType = 'file' | 'url' | 'text';
+export type SubmissionType = 'file' | 'url' | 'text' | 'link';
 
 export interface User {
   id: string;
@@ -77,6 +77,9 @@ export interface Submission {
   file_size: number | null;
   created_at: string;
   submitter?: User;
+  task?: Task;
+  tasks?: Task;
+  content?: string | null;
 }
 
 export interface Message {

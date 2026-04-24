@@ -54,13 +54,13 @@ export async function batchRequest(
  * });
  * ```
  */
-export async function batchRequestTyped<T extends Record<string, BatchRequest>>(
+export async function batchRequestTyped<T extends Record<string, Omit<BatchRequest, 'id'>>>(
   requests: T
 ): Promise<{ [K in keyof T]: any }> {
-  const requestArray = Object.entries(requests).map(([id, req]) => ({
+  const requestArray: BatchRequest[] = Object.entries(requests).map(([id, req]) => ({
     id,
     ...req,
-  }));
+  } as BatchRequest));
 
   const responses = await batchRequest(requestArray);
 

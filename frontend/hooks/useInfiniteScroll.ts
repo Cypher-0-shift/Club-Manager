@@ -26,11 +26,12 @@ export function useInfiniteScroll({
 }: UseInfiniteScrollOptions) {
   return useInfiniteQuery<Task[], Error>({
     queryKey: [...queryKey, filters],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam }) => {
+      const page = pageParam as number;
       const params = new URLSearchParams({
         ...filters,
         limit: pageSize.toString(),
-        offset: (pageParam * pageSize).toString(),
+        offset: (page * pageSize).toString(),
       });
       
       const response = await api.get(`${endpoint}?${params}`);

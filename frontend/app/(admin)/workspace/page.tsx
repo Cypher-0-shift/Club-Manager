@@ -61,7 +61,9 @@ function CreateDomainModal({ onClose, onSuccess }: { onClose: () => void; onSucc
   );
 }
 
-export default function WorkspacePage() {
+import { Suspense } from 'react';
+
+function WorkspaceContent() {
   const { hydrated } = useAuthHydration();
   const { role } = useAppStore();
   const searchParams = useSearchParams();
@@ -134,5 +136,13 @@ export default function WorkspacePage() {
         <CreateDomainModal onClose={() => setShowCreate(false)} onSuccess={() => setShowCreate(false)} />
       )}
     </div>
+  );
+}
+
+export default function WorkspacePage() {
+  return (
+    <Suspense fallback={<div className="spinner" />}>
+      <WorkspaceContent />
+    </Suspense>
   );
 }

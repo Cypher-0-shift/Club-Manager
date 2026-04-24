@@ -17,7 +17,9 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-export default function LoginPage() {
+import { Suspense } from 'react';
+
+function LoginContent() {
   const router = useRouter();
   const { toast } = useToast();
   const { setUser } = useAppStore();
@@ -35,6 +37,7 @@ export default function LoginPage() {
   useEffect(() => {
     const container = particlesRef.current;
     if (!container) return;
+    container.innerHTML = ''; // Clear existing
     for (let i = 0; i < 140; i++) {
       const p = document.createElement('div');
       p.className = 'sparkle';
@@ -252,5 +255,13 @@ export default function LoginPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>Loading...</div>}>
+      <LoginContent />
+    </Suspense>
   );
 }
