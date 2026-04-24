@@ -4,7 +4,9 @@
   "devCommand": "pnpm run dev",
   "installCommand": "pnpm install",
   "framework": "nextjs",
-  "regions": ["iad1"],
+  "regions": [
+    "iad1"
+  ],
   "build": {
     "env": {
       "NEXT_TELEMETRY_DISABLED": "1"
@@ -37,10 +39,4 @@
       ]
     }
   ],
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://your-backend-url.com/v1/:path*"
-    }
-  ]
 }
