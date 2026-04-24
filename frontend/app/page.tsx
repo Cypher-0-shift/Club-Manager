@@ -236,7 +236,7 @@ export default function LandingPage() {
                 style={{
                   width: '100%', padding: '24px', borderRadius: '20px', background: 'rgba(38,38,38,0.5)',
                   border: '1px solid #404040', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s',
-                  display: 'flex', alignItems: 'center', gap: '20px', group: 'true',
+                  display: 'flex', alignItems: 'center', gap: '20px',
                 }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor = '#6366f1'; e.currentTarget.style.background = 'rgba(99,102,241,0.05)'; }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = '#404040'; e.currentTarget.style.background = 'rgba(38,38,38,0.5)'; }}
