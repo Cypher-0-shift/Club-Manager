@@ -3,227 +3,196 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
-import { Task, TaskStatus, TaskPriority, Domain } from '@/types';
-import { StatCard, SkeletonCard } from '@/components/dashboard/StatCard';
-import { useMemo } from 'react';
-
-const STATUS_ORDER: TaskStatus[] = ['pending','in_progress','completed','overdue'];
-const PRIORITY_ORDER: TaskPriority[] = ['low','medium','high','critical'];
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  pending: 'var(--color-pending)',
-  in_progress: 'var(--color-brand)',
-  completed: 'var(--color-completed)',
-  overdue: 'var(--color-overdue)',
-};
-const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  low: '#22c55e', medium: '#f59e0b', high: '#f97316', critical: '#ef4444',
-};
-
-function HorizontalBarChart({ data, total, colorMap }: { data: [string, number][]; total: number; colorMap: Record<string, string> }) {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {data.map(([key, count]) => (
-        <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '90px', fontSize: '12px', color: 'var(--color-text-secondary)', textTransform: 'capitalize', textAlign: 'right' }}>
-            {key.replace('_', ' ')}
-          </div>
-          <div style={{ flex: 1, height: '20px', background: 'var(--color-surface-raised)', borderRadius: '4px', overflow: 'hidden' }}>
-            <div style={{
-              height: '100%',
-              width: total > 0 ? `${Math.round((count / total) * 100)}%` : '0%',
-              background: colorMap[key] ?? 'var(--color-brand)',
-              borderRadius: '4px',
-              transition: 'width 0.5s ease',
-            }} />
-          </div>
-          <div style={{ width: '24px', fontSize: '12px', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'right' }}>
-            {count}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
+import { Task, Domain } from '@/types';
+import { StatsRow, SkeletonCard } from '@/components/dashboard/StatCard';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  Cell, PieChart, Pie 
+} from 'recharts';
 
 export function MemberAnalytics() {
   const { user } = useAppStore();
 
-  const { data, isLoading } = useQuery({
+  // 1. Fetch domain list for naming
+  const { data: domains = [] } = useQuery<Domain[]>({
+    queryKey: ['domains'],
+    queryFn: () => api.get('/domains').then(r => r.data),
+    enabled: !!user,
+  });
+
+  // 2. Fetch specialized member analytics data
+  const { data: analytics, isLoading, error } = useQuery({
     queryKey: ['analytics', 'me'],
     queryFn: () => api.get('/tasks/analytics/me').then(r => r.data),
     enabled: !!user,
   });
 
-  const { data: domains = [] } = useQuery<Domain[]>({
-    queryKey: ['all-domains'],
-    queryFn: () => api.get('/domains').then(r => r.data),
-  });
-
   if (isLoading) {
-    return <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>{[0,1,2].map(i => <SkeletonCard key={i} />)}</div>;
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+          {[0, 1, 2, 3].map(i => <SkeletonCard key={i} />)}
+        </div>
+        <SkeletonCard style={{ height: '300px' }} />
+      </div>
+    );
   }
 
-  const stats = data || {
-    total: 0, completed: 0, overdue: 0, completion_rate: 0,
-    by_status: {}, by_priority: {}, submissions: []
-  };
-
-  const byStatus = STATUS_ORDER.map(s => [s, stats.by_status[s] || 0] as [string, number]);
-  const byPriority = PRIORITY_ORDER.map(p => [p, stats.by_priority[p] || 0] as [string, number]);
-
-  // Project breakdown from submissions / tasks.
-  // We can't do project breakdown effectively from /analytics/me unless we fetch all projects or tasks.
-  // Wait, /analytics/me doesn't return tasks? Oh, we might need all tasks.
-  // Instead of querying tasks again, let's use the 'submissions' list for Row 5.
-  // Row 4 asks for Project breakdown table: Project | Domain | Assigned | Completed | Overdue | Status.
-  // To do this, we need the raw tasks. Let's just fetch /tasks/my for member.
-  return <MemberAnalyticsFull />;
-}
-
-function MemberAnalyticsFull() {
-  const { user } = useAppStore();
-
-  const { data: tasks = [], isLoading } = useQuery<Task[]>({
-    queryKey: ['my-tasks'],
-    queryFn: () => api.get('/tasks/my').then(r => r.data),
-    enabled: !!user,
-  });
-
-  const { data: domains = [] } = useQuery<Domain[]>({
-    queryKey: ['all-domains'],
-    queryFn: () => api.get('/domains').then(r => r.data),
-  });
-
-  if (isLoading) {
-    return <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>{[0,1,2].map(i => <SkeletonCard key={i} />)}</div>;
+  if (error) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--color-overdue)' }}>
+        <h3 style={{ fontSize: '18px', fontWeight: 600 }}>Error loading analytics</h3>
+        <p style={{ fontSize: '14px', marginTop: '8px', opacity: 0.8 }}>{(error as any).message || 'Please try again later'}</p>
+      </div>
+    );
   }
 
-  const byStatus = STATUS_ORDER.map(s => [s, tasks.filter(t => t.status === s).length] as [string, number]);
-  const byPriority = PRIORITY_ORDER.map(p => [p, tasks.filter(t => t.priority === p).length] as [string, number]);
-  const completionRate = tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'completed').length / tasks.length) * 100) : 0;
+  if (!analytics) return null;
+  const isPresident = user?.role === 'president';
 
-  // Project breakdown
-  const projectsMap: Record<string, any> = {};
-  tasks.forEach(t => {
-    if (!t.project) return;
-    if (!projectsMap[t.project_id]) {
-      projectsMap[t.project_id] = {
-        name: t.project.name,
-        domain_id: t.project.domain_id,
-        assigned: 0, completed: 0, overdue: 0
-      };
-    }
-    projectsMap[t.project_id].assigned += 1;
-    if (t.status === 'completed') projectsMap[t.project_id].completed += 1;
-    if (t.status === 'overdue' || t.is_overdue) projectsMap[t.project_id].overdue += 1;
-  });
-  const projectStats = Object.values(projectsMap);
+  const { total, completed, overdue, by_status, by_priority, completion_rate, submissions, is_org_wide } = analytics;
 
-  // Recent Activity from tasks (since submissions endpoint is task specific, we can just use recently completed tasks)
-  // Wait, MOD-017 asked to add submissions to /analytics/me.
-  // Let's use the analytics/me endpoint just for submissions.
-  return <MemberAnalyticsDisplay 
-    tasks={tasks} projectStats={projectStats} 
-    byStatus={byStatus} byPriority={byPriority} 
-    completionRate={completionRate} domains={domains} 
-  />;
-}
+  // Prepare chart data
+  const statusData = Object.entries(by_status || {}).map(([name, value]) => ({ 
+    name: name.replace('_', ' '), 
+    value 
+  }));
+  const priorityData = Object.entries(by_priority || {}).map(([name, value]) => ({ name, value }));
 
-function MemberAnalyticsDisplay({ tasks, projectStats, byStatus, byPriority, completionRate, domains }: any) {
-  const { data: analytics } = useQuery({
-    queryKey: ['analytics', 'me'],
-    queryFn: () => api.get('/tasks/analytics/me').then(r => r.data),
-  });
-
-  const submissions = analytics?.submissions || [];
-  const domainMap = Object.fromEntries(domains.map((d: Domain) => [d.id, d.name]));
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       <div>
-        <h1 className="section-title" style={{ fontSize: '20px' }}>My Performance</h1>
+        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>
+          {is_org_wide ? 'Organization Overview' : 'Your Performance'}
+        </h1>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+          {is_org_wide 
+            ? 'Real-time metrics and task distribution across the entire organization.' 
+            : 'Overview of your task contributions and completion metrics.'
+          }
+        </p>
       </div>
 
-      {/* Row 1: KPI cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-        <StatCard label="Total Assigned" value={tasks.length} />
-        <StatCard label="Completed" value={tasks.filter((t:Task) => t.status === 'completed').length} accent="var(--color-completed)" />
-        <StatCard label="Overdue" value={tasks.filter((t:Task) => t.is_overdue || t.status === 'overdue').length} accent="var(--color-overdue)" />
-        <StatCard label="Completion Rate" value={`${completionRate}%`} accent="var(--color-brand)" />
+      <StatsRow 
+        tasks={[]} // We pass raw numbers below instead
+        customStats={[
+          { label: is_org_wide ? 'Total Tasks' : 'Total Assigned', value: total, trend: 'total' },
+          { label: 'Completed', value: completed, trend: 'up' },
+          { label: 'Overdue', value: overdue, trend: 'down' },
+          { label: 'Success Rate', value: `${completion_rate}%`, trend: 'neutral' },
+        ]}
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px' }}>
+        {/* Status Distribution */}
+        <div style={{ background: '#171717', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '24px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
+            Task Distribution
+          </h3>
+          <div style={{ height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={statusData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip 
+                  contentStyle={{ background: '#262626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                  itemStyle={{ color: '#fff' }}
+                />
+                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                  {statusData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Priority Breakdown */}
+        <div style={{ background: '#171717', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '24px' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '24px', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
+            Priority Split
+          </h3>
+          <div style={{ height: '300px' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={priorityData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {priorityData.map((_, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[(index + 2) % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ background: '#262626', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
       </div>
 
-      {/* Row 2 & 3: Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-        <div className="card">
-          <h2 className="section-title" style={{ marginBottom: '16px', fontSize: '15px' }}>Status Breakdown</h2>
-          <HorizontalBarChart data={byStatus} total={tasks.length} colorMap={STATUS_COLORS as Record<string, string>} />
+      {/* Recent Submissions */}
+      <div style={{ background: '#171717', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', overflow: 'hidden' }}>
+        <div style={{ padding: '24px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <h3 style={{ fontSize: '14px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-muted)' }}>
+            Recent Activity
+          </h3>
         </div>
-        <div className="card">
-          <h2 className="section-title" style={{ marginBottom: '16px', fontSize: '15px' }}>Priority Distribution</h2>
-          <HorizontalBarChart data={byPriority} total={tasks.length} colorMap={PRIORITY_COLORS as Record<string, string>} />
-        </div>
-      </div>
-
-      {/* Row 4: Project breakdown */}
-      <div className="card glass-subtle" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border-subtle)' }}>
-          <h2 className="section-title" style={{ fontSize: '15px', margin: 0 }}>Project Breakdown</h2>
-        </div>
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr><th>Project</th><th>Domain</th><th>Assigned</th><th>Completed</th><th>Overdue</th><th>Status</th></tr>
-            </thead>
-            <tbody>
-              {projectStats.map((p: any, i: number) => {
-                const isDone = p.completed === p.assigned && p.assigned > 0;
-                return (
-                  <tr key={i}>
-                    <td style={{ fontWeight: 500 }}>{p.name}</td>
-                    <td style={{ color: 'var(--color-text-muted)' }}>{domainMap[p.domain_id] || '—'}</td>
-                    <td>{p.assigned}</td>
-                    <td style={{ color: 'var(--color-completed)' }}>{p.completed}</td>
-                    <td style={{ color: p.overdue > 0 ? 'var(--color-overdue)' : 'inherit' }}>{p.overdue}</td>
-                    <td>
-                      {isDone ? <span className="badge badge-completed">Done</span> : <span className="badge badge-pending">Active</span>}
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.07)', color: 'var(--color-text-muted)' }}>
+              <th style={{ padding: '16px 24px', fontWeight: 500 }}>Task</th>
+              {is_org_wide && <th style={{ padding: '16px 24px', fontWeight: 500 }}>Member</th>}
+              <th style={{ padding: '16px 24px', fontWeight: 500 }}>Type</th>
+              <th style={{ padding: '16px 24px', fontWeight: 500 }}>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {submissions.length === 0 ? (
+              <tr>
+                <td colSpan={is_org_wide ? 4 : 3} style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                  No recent activity found.
+                </td>
+              </tr>
+            ) : (
+              submissions.slice(0, 10).map((s: any) => (
+                <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <td style={{ padding: '16px 24px', fontWeight: 500 }}>{s.tasks?.title || 'Unknown Task'}</td>
+                  {is_org_wide && (
+                    <td style={{ padding: '16px 24px', color: '#fff' }}>
+                      {s.submitter?.full_name || 'System'}
                     </td>
-                  </tr>
-                );
-              })}
-              {projectStats.length === 0 && (
-                <tr><td colSpan={6} style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>No projects assigned</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Row 5: Recent Activity */}
-      <div className="card glass-subtle" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ padding: '16px', borderBottom: '1px solid var(--color-border-subtle)' }}>
-          <h2 className="section-title" style={{ fontSize: '15px', margin: 0 }}>Recent Activity</h2>
-        </div>
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr><th>Date</th><th>Task</th><th>Submission Type</th></tr>
-            </thead>
-            <tbody>
-              {submissions.slice(0, 10).map((s: any) => (
-                <tr key={s.id}>
-                  <td style={{ color: 'var(--color-text-muted)' }}>{new Date(s.created_at).toLocaleDateString()}</td>
-                  <td style={{ fontWeight: 500 }}>{s.task?.title || 'Unknown Task'}</td>
-                  <td><span className="badge" style={{ background: 'var(--color-surface-hover)' }}>{s.type}</span></td>
+                  )}
+                  <td style={{ padding: '16px 24px' }}>
+                    <span style={{ 
+                      background: 'rgba(255,255,255,0.05)', 
+                      padding: '2px 8px', 
+                      borderRadius: '4px',
+                      fontSize: '11px',
+                      textTransform: 'capitalize'
+                    }}>
+                      {s.type}
+                    </span>
+                  </td>
+                  <td style={{ padding: '16px 24px', color: 'var(--color-text-muted)' }}>
+                    {new Date(s.created_at).toLocaleDateString()}
+                  </td>
                 </tr>
-              ))}
-              {submissions.length === 0 && (
-                <tr><td colSpan={3} style={{ padding: '32px', textAlign: 'center', color: 'var(--color-text-muted)' }}>No recent submissions</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-
     </div>
   );
 }

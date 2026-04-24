@@ -1,67 +1,98 @@
-# Club Task Manager
+# 🎯 Club Task Manager
 
-## 1. Project Overview
-Club Task Manager is a role-based, domain-driven project management system designed specifically for university clubs and organizations. It provides a secure, hierarchical workspace where different roles (President, VP, Secretary, Lead, and Member) can manage tasks, track progress via Kanban boards, and approve new member signups within their respective domains.
+**Enterprise-grade task management system for university clubs and organizations**
 
-## 2. Tech Stack
-- **Frontend**: Next.js 15 (App Router), React, Zustand (State Management), React Query, Tailwind CSS, dnd-kit (Kanban drag-and-drop)
-- **Backend**: FastAPI (Python), Supabase (PostgreSQL + GoTrue Authentication)
-- **Database**: PostgreSQL (via Supabase)
+Club Task Manager is a **transparent, organization-wide** project management system designed for university clubs. It provides a secure, hierarchical workspace where all members can view organization progress while maintaining strict operational controls via Role-Based Access Control (RBAC).
 
-## 3. Quick Start
-To start both the frontend and backend servers locally, you can use the provided batch script on Windows:
-```bash
-./start.bat
-```
+---
 
-Alternatively, run them separately:
-**Backend**:
+## 📋 Features
+
+- **🔐 5-Tier RBAC:** President, VP, Secretary, Lead, and Member roles.
+- **🌐 Global Visibility:** Organization-wide transparency by default—everyone can view all domains, projects, and tasks.
+- **🛡️ Granular Permissions:** Leads manage only their assigned domains; Members have read-only access to organization workspaces.
+- **📊 Kanban Boards:** Drag-and-drop task management with real-time status updates.
+- **📁 Proof of Work:** File submission system for task completion with automated validation.
+- **📈 Analytics:** Personalized performance dashboards for Members and high-level oversight for Executives.
+- **🔔 Notifications:** Real-time updates on task assignments and organizational changes.
+
+---
+
+## 🏗️ Architecture & Tech Stack
+
+- **Frontend:** Next.js 15 (App Router), TypeScript, Tailwind CSS, Zustand, React Query.
+- **Backend:** FastAPI (Python 3.11+), Async/Await, Pydantic, Loguru.
+- **Database:** Supabase (PostgreSQL) with Row Level Security (RLS) policies.
+- **Caching:** Redis-ready (optional) for high-performance permission checks.
+
+---
+
+## 🚀 Deployment Guide
+
+### **Backend (Railway)**
+Railway is the recommended platform for the FastAPI backend.
+
+1. **Setup Repository**: Push your code to a GitHub repository.
+2. **Create Railway Project**: Connect your GitHub repo to Railway.
+3. **Environment Variables**:
+   - `SUPABASE_URL`: Your Supabase project URL.
+   - `SUPABASE_SERVICE_KEY`: Your Supabase service role key.
+   - `JWT_SECRET`: Secret for signing tokens.
+   - `ALLOWED_ORIGINS`: Your Vercel frontend URL (e.g., `https://your-app.vercel.app`).
+4. **Start Command**: Railway auto-detects FastAPI, but you can set:
+   `uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8001}`
+
+### **Frontend (Vercel)**
+Vercel is the recommended platform for the Next.js frontend.
+
+1. **Deploy to Vercel**: Import your repository into Vercel.
+2. **Framework Preset**: Select "Next.js".
+3. **Environment Variables**:
+   - `NEXT_PUBLIC_SUPABASE_URL`: Same as backend.
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anon key.
+   - `NEXT_PUBLIC_API_URL`: Your Railway backend URL (e.g., `https://backend-production.up.railway.app/v1`).
+4. **Build Settings**: `npm run build`.
+
+---
+
+## 🛠️ Local Development
+
+### Prerequisites
+- Node.js 20+
+- Python 3.11+
+- Supabase Account
+
+### 1. Setup Database
+- Run all SQL migrations found in the `/supabase/migrations` folder on your Supabase SQL Editor.
+
+### 2. Setup Backend
 ```bash
 cd backend
-poetry install
-uvicorn app.main:app --reload --port 8000
+python -m venv .venv
+source .venv/bin/activate  # or .venv\Scripts\activate on Windows
+pip install -r requirements.txt
+cp .env.example .env  # Fill in your credentials
+uvicorn app.main:app --reload --port 8001
 ```
-**Frontend**:
+
+### 3. Setup Frontend
 ```bash
 cd frontend
-pnpm install
-pnpm run dev
+pnpm install  # or npm install
+cp .env.local.example .env.local  # Fill in your credentials
+pnpm dev
 ```
 
-## 4. First Time Setup
-To initialize your local environment from scratch:
+---
 
-1. **Run Supabase Migrations**: Execute the SQL files located in `supabase/migrations/` in order (`001`, `002`, `003`) within your Supabase SQL Editor.
-2. **Create the President Account**: Open a terminal, navigate to the backend directory, and run the provisioning script:
-   ```bash
-   cd backend
-   python create_president.py
-   ```
-3. **Login**: Navigate to `http://localhost:3000/login` and sign in with the credentials:
-   - Email: `president@test.com`
-   - Password: `password123`
+## 📂 Project Structure
 
-## 5. Environment Variables
-Both the frontend and backend require specific environment variables to connect to Supabase.
-- Backend: See `backend/.env.example`
-- Frontend: See `frontend/.env.example`
+- `/backend`: FastAPI source code and API logic.
+- `/frontend`: Next.js application and UI components.
+- `/supabase`: Database schema and RLS migrations.
+- `README.md`: This file.
 
-## 6. Deployment
-The application is architected to be easily deployed to modern cloud providers:
-- **Frontend (Vercel)**: Connect your repository to Vercel, select the `frontend` root directory, and provide the environment variables defined in `.env.production.example`.
-- **Backend (Render)**: Connect your repository to Render using the provided `backend/render.yaml` blueprint. Provide the missing environment variables in the Render dashboard.
+---
 
-## 7. Demo Seed Data
-To populate your environment with demo domains, projects, and tasks for testing:
-```bash
-cd backend
-python seed_rbac.py
-```
-
-## 8. Role Reference
-| Role | Permissions |
-| :--- | :--- |
-| **President** | Full organizational control. Can edit roles, domains, projects, and org-wide settings. |
-| **VP / Secretary** | Administrative access. Can manage users, approve signups, and edit domains/projects. |
-| **Lead** | Domain-level control. Can manage projects and tasks within their assigned domain only. |
-| **Member** | Contributor access. Can view their tasks and submit proof of work. Restricted to their domain. |
+## ⚖️ License
+Licensed under the MIT License.

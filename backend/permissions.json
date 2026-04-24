@@ -1,0 +1,252 @@
+[
+  {
+    "role": "president",
+    "permissions": {
+      "users": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true,
+        "approve": true
+      },
+      "domains": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "projects": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "tasks": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true,
+        "assign": true
+      },
+      "submissions": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "messages": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "analytics": {
+        "read": true
+      },
+      "settings": {
+        "read": true,
+        "update": true
+      }
+    }
+  },
+  {
+    "role": "vp",
+    "permissions": {
+      "users": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false,
+        "approve": true
+      },
+      "domains": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false
+      },
+      "projects": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "tasks": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true,
+        "assign": true
+      },
+      "submissions": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false
+      },
+      "messages": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false
+      },
+      "analytics": {
+        "read": true
+      },
+      "settings": {
+        "read": true,
+        "update": false
+      }
+    }
+  },
+  {
+    "role": "secretary",
+    "permissions": {
+      "users": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false,
+        "approve": true
+      },
+      "domains": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false
+      },
+      "projects": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "tasks": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true,
+        "assign": true
+      },
+      "submissions": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false
+      },
+      "messages": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": false
+      },
+      "analytics": {
+        "read": true
+      },
+      "settings": {
+        "read": true,
+        "update": false
+      }
+    }
+  },
+  {
+    "role": "lead",
+    "permissions": {
+      "users": {
+        "read": true,
+        "create": false,
+        "update": true,
+        "delete": false,
+        "approve": false
+      },
+      "domains": {
+        "read": true,
+        "create": false,
+        "update": false,
+        "delete": false
+      },
+      "projects": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true
+      },
+      "tasks": {
+        "read": true,
+        "create": true,
+        "update": true,
+        "delete": true,
+        "assign": true
+      },
+      "submissions": {
+        "read": true,
+        "create": true,
+        "update": false,
+        "delete": false
+      },
+      "messages": {
+        "read": true,
+        "create": true,
+        "update": false,
+        "delete": false
+      },
+      "analytics": {
+        "read": true
+      },
+      "settings": {
+        "read": true,
+        "update": false
+      }
+    }
+  },
+  {
+    "role": "member",
+    "permissions": {
+      "users": {
+        "read": true,
+        "create": false,
+        "update": false,
+        "delete": false,
+        "approve": false
+      },
+      "domains": {
+        "read": true,
+        "create": false,
+        "update": false,
+        "delete": false
+      },
+      "projects": {
+        "read": true,
+        "create": false,
+        "update": false,
+        "delete": false
+      },
+      "tasks": {
+        "read": true,
+        "create": false,
+        "update": true,
+        "delete": false,
+        "assign": false
+      },
+      "submissions": {
+        "read": true,
+        "create": true,
+        "update": false,
+        "delete": false
+      },
+      "messages": {
+        "read": true,
+        "create": true,
+        "update": false,
+        "delete": false
+      },
+      "analytics": {
+        "read": false
+      },
+      "settings": {
+        "read": true,
+        "update": false
+      }
+    }
+  }
+]

@@ -1,0 +1,55 @@
+services:
+  - type: web
+    name: club-task-manager-api
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2
+    healthCheckPath: /health
+    
+    envVars:
+      # Supabase
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      
+      # Security (PHASE 3)
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      
+      # CORS (PHASE 3)
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      
+      # Redis (Optional - leave empty to disable)
+      - key: REDIS_HOST
+        value: ""
+      - key: REDIS_PORT
+        value: "6379"
+      - key: REDIS_PASSWORD
+        value: ""
+      - key: REDIS_DB
+        value: "0"
+      
+      # Secrets Manager (PHASE 3)
+      - key: USE_ENV_SECRETS
+        value: "true"
+      - key: AWS_SECRETS_ENABLED
+        value: "false"
+      - key: SUPABASE_VAULT_ENABLED
+        value: "false"
+      
+      # Encryption (PHASE 3)
+      - key: ENABLE_ENCRYPTION
+        value: "false"
+    
+    autoDeploy: true

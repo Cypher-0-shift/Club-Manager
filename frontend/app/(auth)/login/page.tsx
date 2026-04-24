@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -22,7 +22,9 @@ export default function LoginPage() {
   const { toast } = useToast();
   const { setUser } = useAppStore();
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<'admin' | 'member'>('admin');
+  const searchParams = useSearchParams();
+  const initialView = searchParams.get('view') === 'member' ? 'member' : 'admin';
+  const [view, setView] = useState<'admin' | 'member'>(initialView);
   const [showPw, setShowPw] = useState(false);
   const particlesRef = useRef<HTMLDivElement>(null);
 
@@ -107,9 +109,6 @@ export default function LoginPage() {
             <h1 className="font-display" style={{ fontSize: '40px', fontWeight: 700, letterSpacing: '-0.04em', marginBottom: '8px' }}>
               {isAdmin ? 'Welcome Back' : 'Member Access'}
             </h1>
-            <p style={{ color: '#525252', fontSize: '14px' }}>
-              {isAdmin ? 'Access your secure executive terminal.' : "Connect to your club's workspace."}
-            </p>
           </div>
 
           {/* Glass card */}
@@ -141,8 +140,8 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
               {/* Email */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <label style={{ fontSize: '10px', fontWeight: 700, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>
-                  {isAdmin ? 'Executive Email' : 'Member Email'}
+                <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em', marginLeft: '4px' }}>
+                  Email Address
                 </label>
                 <div style={{ position: 'relative' }}>
                   <svg style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#525252', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -164,12 +163,11 @@ export default function LoginPage() {
                 </div>
                 {errors.email && <span style={{ fontSize: '12px', color: '#ef4444' }}>{errors.email.message}</span>}
               </div>
-
+ 
               {/* Password */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginLeft: '4px' }}>
-                  <label style={{ fontSize: '10px', fontWeight: 700, color: '#525252', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Access Key</label>
-                  <button type="button" style={{ fontSize: '10px', fontWeight: 700, color: '#0ea5e9', background: 'none', border: 'none', cursor: 'pointer', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Forgot?</button>
+                  <label style={{ fontSize: '10px', fontWeight: 700, color: '#a3a3a3', textTransform: 'uppercase', letterSpacing: '0.2em' }}>Password</label>
                 </div>
                 <div style={{ position: 'relative' }}>
                   <svg style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: '#525252', pointerEvents: 'none' }} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -216,7 +214,7 @@ export default function LoginPage() {
               {/* Remember */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginLeft: '4px' }}>
                 <input type="checkbox" id="remember-me" style={{ width: '16px', height: '16px', borderRadius: '4px', accentColor: '#0ea5e9' }} />
-                <label htmlFor="remember-me" style={{ fontSize: '12px', color: '#525252', cursor: 'pointer' }}>Keep session active</label>
+                <label htmlFor="remember-me" style={{ fontSize: '12px', color: '#a3a3a3', cursor: 'pointer' }}>Keep session active</label>
               </div>
 
               {/* Submit */}
@@ -245,32 +243,14 @@ export default function LoginPage() {
 
             {/* Footer */}
             <div style={{ marginTop: '32px', paddingTop: '24px', borderTop: '1px solid rgba(38,38,38,0.5)', textAlign: 'center' }}>
-              <p style={{ fontSize: '12px', color: '#525252' }}>
-                New executive?{' '}
+              <p style={{ fontSize: '12px', color: '#a3a3a3' }}>
+                New organization?{' '}
                 <a href="/signup" id="signup-link" style={{ color: '#fff', fontWeight: 700, letterSpacing: '-0.02em', textDecoration: 'none', textTransform: 'uppercase' }}>Create Account</a>
               </p>
             </div>
           </div>
-
-          {/* Footer badges */}
-          <div style={{ marginTop: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px', opacity: 0.4 }}>
-            {[{ label: 'Encrypted' }, { label: 'Quantum Ready' }].map(({ label }) => (
-              <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase' }}>{label}</span>
-              </div>
-            ))}
-          </div>
         </div>
       </main>
-
-      {/* Page footer */}
-      <footer style={{ position: 'fixed', bottom: '32px', left: 0, width: '100%', padding: '0 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '9px', fontWeight: 700, letterSpacing: '0.3em', color: '#404040', textTransform: 'uppercase', zIndex: 20 }}>
-        <div>© 2026 Club Manager</div>
-        <div style={{ display: 'flex', gap: '24px' }}>
-          <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy</a>
-          <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>Terms</a>
-        </div>
-      </footer>
     </div>
   );
 }

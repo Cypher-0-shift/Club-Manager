@@ -1,20 +1,25 @@
 'use client';
 
+import { useSearchParams } from 'next/navigation';
 import { AppShell } from '@/components/layout/AppShell';
-import { AdminBoard } from '@/components/admin/AdminBoard';
-import { MemberBoard } from '@/components/member/MemberBoard';
-import { useAppStore } from '@/lib/store';
 import { useAuthHydration } from '@/hooks/useAuthHydration';
+import { MyBoardView } from '@/components/shared/board/MyBoardView';
+import { ProjectTaskViewer } from '@/components/shared/board/ProjectTaskViewer';
 
 export default function UnifiedBoardPage() {
   const { hydrated } = useAuthHydration();
-  const { role } = useAppStore();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('project_id');
 
   if (!hydrated) return null;
 
   return (
     <AppShell>
-      {role === 'member' ? <MemberBoard /> : <AdminBoard />}
+      {projectId ? (
+        <ProjectTaskViewer projectId={projectId} />
+      ) : (
+        <MyBoardView />
+      )}
     </AppShell>
   );
 }

@@ -7,11 +7,10 @@ import { useAppStore } from '@/lib/store';
 import { Task, TaskStatus, TaskPriority, Project, User } from '@/types';
 import { KanbanColumn } from '@/components/shared/board/KanbanColumn';
 import { TaskCard } from '@/components/shared/board/TaskCard';
-import { TaskTable } from '@/components/admin/TaskTable';
 import { TaskModal } from '@/components/tasks/TaskModal';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
 import { useToast } from '@/components/ui/Toast';
-import { Search, LayoutGrid, List, X } from 'lucide-react';
+import { Search, LayoutGrid, X } from 'lucide-react';
 import {
   DndContext, DragOverlay, closestCorners, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragStartEvent, DragEndEvent, defaultDropAnimationSideEffects
@@ -19,25 +18,10 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { isThisWeek, isThisMonth, isBefore, startOfDay } from 'date-fns';
 
-type ViewMode = 'kanban' | 'table';
-
 export function AdminBoard() {
   const { user, boardFilters, setBoardFilter, clearBoardFilters } = useAppStore();
   const { toast } = useToast();
   const qc = useQueryClient();
-
-  const [viewMode, setViewMode] = useState<ViewMode>('kanban');
-  
-  // Load persisted view mode
-  useEffect(() => {
-    const saved = localStorage.getItem('adminBoardView');
-    if (saved === 'kanban' || saved === 'table') setViewMode(saved);
-  }, []);
-
-  const handleViewChange = (mode: ViewMode) => {
-    setViewMode(mode);
-    localStorage.setItem('adminBoardView', mode);
-  };
 
   const domainId = user?.domain_id;
 
@@ -141,22 +125,6 @@ export function AdminBoard() {
       {/* Top Header & Toolbar */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h1 className="section-title" style={{ fontSize: '20px', margin: 0 }}>Club Board</h1>
-        <div style={{ display: 'flex', background: 'var(--color-surface-hover)', padding: '4px', borderRadius: 'var(--radius-md)', gap: '4px' }}>
-          <button 
-            onClick={() => handleViewChange('kanban')}
-            className={`btn btn-sm btn-icon ${viewMode === 'kanban' ? 'btn-primary' : 'btn-ghost'}`}
-            title="Kanban View"
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button 
-            onClick={() => handleViewChange('table')}
-            className={`btn btn-sm btn-icon ${viewMode === 'table' ? 'btn-primary' : 'btn-ghost'}`}
-            title="Table View"
-          >
-            <List size={16} />
-          </button>
-        </div>
       </div>
 
       <div style={{
@@ -210,7 +178,7 @@ export function AdminBoard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', height: '100%' }}>
             {[0, 1, 2, 3].map(i => <div key={i} className="kanban-column glass-subtle animate-pulse" style={{ height: '600px' }} />)}
           </div>
-        ) : viewMode === 'kanban' ? (
+        ) : (
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', height: '100%', alignItems: 'start' }}>
               {columns.map(status => (
@@ -232,14 +200,6 @@ export function AdminBoard() {
               ) : null}
             </DragOverlay>
           </DndContext>
-        ) : (
-          <div style={{ overflow: 'auto', maxHeight: '100%' }}>
-            {/* The TaskTable internally has some filters, but we already filtered the data. 
-                Wait, TaskTable has its own search and filters. Let's pass the filteredTasks to it. 
-                TaskTable filters will just act as a secondary filter, or we can use a simpler version. 
-                Since TaskTable is a component, it will filter again. That's fine. */}
-            <TaskTable tasks={filteredTasks} onTaskClick={setSelectedTask} />
-          </div>
         )}
       </div>
 

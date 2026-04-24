@@ -14,7 +14,7 @@ const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
 const schema = z.object({
   title: z.string().min(1, 'Title required').max(120, 'Max 120 characters'),
   description: z.string().optional(),
-  priority: z.enum(['low','medium','high','critical'] as const),
+  priority: z.enum(['low', 'medium', 'high', 'critical'] as const),
   deadlineDate: z.string().optional(),
   deadlineTime: z.string().optional(),
   domain_id: z.string().min(1, 'Domain required'),
@@ -37,7 +37,7 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
   const { toast } = useToast();
   const [charCount, setCharCount] = useState(0);
   const [allocateTime, setAllocateTime] = useState(false);
-  
+
   const [assigneeSearch, setAssigneeSearch] = useState('');
   const [showAssigneeDropdown, setShowAssigneeDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -69,17 +69,17 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
     register, handleSubmit, watch, control, setValue, formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { 
-      priority: 'medium', 
+    defaultValues: {
+      priority: 'medium',
       domain_id: domainId || '',
-      project_id: forcedProjectId || null 
+      project_id: forcedProjectId || null
     },
     mode: 'onChange',
   });
 
   const title = watch('title');
   const selectedAssigneeId = watch('assignee_id');
-  
+
   useEffect(() => setCharCount(title?.length ?? 0), [title]);
 
   useEffect(() => {
@@ -100,11 +100,11 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
         const time = allocateTime ? (deadlineTime || '11:59') : '23:59';
         deadline = `${deadlineDate}T${time}:00`;
       }
-      
-      return api.post('/tasks', { 
-        ...rest, 
+
+      return api.post('/tasks', {
+        ...rest,
         deadline,
-        status: defaultStatus, 
+        status: defaultStatus,
         created_by: user?.id,
         project_id: data.project_id || null
       });
@@ -119,7 +119,7 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
   const today = new Date().toISOString().slice(0, 10);
 
   const filteredMembers = useMemo(() => {
-    return members.filter(m => 
+    return members.filter(m =>
       m.full_name.toLowerCase().includes(assigneeSearch.toLowerCase()) ||
       m.role.toLowerCase().includes(assigneeSearch.toLowerCase())
     );
@@ -149,13 +149,14 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
         >
           {/* Title */}
           <div className="form-group">
-            <label className="form-label" style={{ color: '#525252' }}>Task Title *</label>
+            <label className="form-label" style={{ color: '#ffffff', fontWeight: 800, fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Task Title *</label>
             <input
               {...register('title')}
               className="form-input"
               placeholder="What needs to be done?"
               maxLength={120}
               id="create-task-title"
+              style={{ fontWeight: 600, fontSize: '15px' }}
             />
             {charCount >= 80 && (
               <span style={{ fontSize: '11px', color: charCount >= 120 ? 'var(--color-overdue)' : 'var(--color-text-muted)', alignSelf: 'flex-end' }}>
@@ -167,19 +168,19 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
 
           {/* Description */}
           <div className="form-group">
-            <label className="form-label" style={{ color: '#525252' }}>Description</label>
+            <label className="form-label" style={{ color: '#ffffff', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</label>
             <textarea
               {...register('description')}
               className="form-input"
               rows={3}
               placeholder="Optional details…"
-              style={{ resize: 'vertical' }}
+              style={{ resize: 'vertical', fontWeight: 500 }}
             />
           </div>
 
           {/* Priority */}
           <div className="form-group">
-            <label className="form-label" style={{ color: '#525252' }}>Priority *</label>
+            <label className="form-label" style={{ color: '#ffffff', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Priority *</label>
             <Controller
               name="priority"
               control={control}
@@ -203,12 +204,12 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
           {/* Deadline */}
           <div className="form-group">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label className="form-label" style={{ marginBottom: 0, color: '#525252' }}>Deadline</label>
+              <label className="form-label" style={{ marginBottom: 0, color: '#ffffff', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deadline</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <input 
-                  type="checkbox" 
-                  id="allocate-time" 
-                  checked={allocateTime} 
+                <input
+                  type="checkbox"
+                  id="allocate-time"
+                  checked={allocateTime}
                   onChange={e => setAllocateTime(e.target.checked)}
                   style={{ cursor: 'pointer' }}
                 />
@@ -244,14 +245,14 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
 
           {/* Project - Optional */}
           <div className="form-group">
-            <label className="form-label" style={{ color: '#525252' }}>Project (Optional)</label>
+            <label className="form-label" style={{ color: '#ffffff', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Project (Optional)</label>
             <Controller
               name="project_id"
               control={control}
               render={({ field }) => (
-                <select 
-                  {...field} 
-                  value={field.value || ''} 
+                <select
+                  {...field}
+                  value={field.value || ''}
                   onChange={e => field.onChange(e.target.value || null)}
                   className="form-input"
                   disabled={!!forcedProjectId}
@@ -265,9 +266,9 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
 
           {/* Assignee - Searchable Dropdown */}
           <div className="form-group" style={{ position: 'relative' }} ref={dropdownRef}>
-            <label className="form-label" style={{ color: '#525252' }}>Assignee</label>
-            <div 
-              className="form-input" 
+            <label className="form-label" style={{ color: '#ffffff', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assignee</label>
+            <div
+              className="form-input"
               onClick={() => setShowAssigneeDropdown(!showAssigneeDropdown)}
               style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
             >
@@ -286,16 +287,16 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
             </div>
 
             {showAssigneeDropdown && (
-              <div className="card glass-subtle" style={{ 
+              <div className="card glass-subtle" style={{
                 position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 10,
                 marginTop: '4px', padding: '8px', maxHeight: '240px', overflowY: 'auto',
                 display: 'flex', flexDirection: 'column', gap: '4px', boxShadow: '0 8px 24px rgba(0,0,0,0.2)'
               }}>
                 <div style={{ position: 'relative', marginBottom: '8px' }}>
                   <Search size={14} style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-                  <input 
-                    className="form-input" 
-                    placeholder="Search members..." 
+                  <input
+                    className="form-input"
+                    placeholder="Search members..."
                     value={assigneeSearch}
                     onChange={e => setAssigneeSearch(e.target.value)}
                     onClick={e => e.stopPropagation()}
@@ -304,8 +305,8 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
                   />
                 </div>
 
-                <div 
-                  className="dropdown-item" 
+                <div
+                  className="dropdown-item"
                   onClick={() => { setValue('assignee_id', null); setShowAssigneeDropdown(false); }}
                   style={{ padding: '8px', borderRadius: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                 >
@@ -314,7 +315,7 @@ export function CreateTaskModal({ domainId: propDomainId, defaultStatus, onClose
                 </div>
 
                 {filteredMembers.map(m => (
-                  <div 
+                  <div
                     key={m.id}
                     className="dropdown-item"
                     onClick={() => { setValue('assignee_id', m.id); setShowAssigneeDropdown(false); }}

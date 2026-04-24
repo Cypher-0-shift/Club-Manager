@@ -1,13 +1,10 @@
 'use client';
 
-import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { MemberSidebar } from '@/components/member/MemberSidebar';
+import { Sidebar } from './Sidebar';
 import { TopBar } from './TopBar';
 import { OfflineBanner } from '@/components/ui/OfflineBanner';
-import { useAppStore } from '@/lib/store';
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { role } = useAppStore();
   return (
     <div style={{
       display: 'flex',
@@ -16,7 +13,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       background: '#000000',
     }}>
       <OfflineBanner />
-      {role === 'member' ? <MemberSidebar /> : <AdminSidebar />}
+      
+      <Sidebar />
+
       <main style={{
         flex: 1,
         display: 'flex',

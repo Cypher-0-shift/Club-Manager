@@ -10,29 +10,24 @@ EXEC_ROLES = ("president", "vp", "secretary")
 LEAD_AND_ABOVE = ("president", "vp", "secretary", "lead")
 
 
-@router.get("/", response_model=list[ProjectOut])
+@router.get("", response_model=list[ProjectOut])
 async def list_projects(
     domain_id: Optional[str] = None,
-    limit: int = Query(50, ge=1, le=200),
+    limit: int = Query(50, ge=1, le=5000),
     offset: int = Query(0, ge=0),
     current_user: dict = Depends(get_current_user),
 ):
     sb = get_supabase_admin()
-    query = sb.table("projects").select("*")
+    query = sb.table("projects").select("*").eq("org_id", current_user["org_id"])
 
     if domain_id:
-        if current_user["role"] not in EXEC_ROLES and domain_id != current_user.get("domain_id"):
-            raise HTTPException(status_code=403, detail="Cannot access another domain's projects")
         query = query.eq("domain_id", domain_id)
-    elif current_user["role"] not in EXEC_ROLES:
-        # Non-execs only see their domain's projects
-        query = query.eq("domain_id", current_user.get("domain_id"))
 
     result = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     return result.data or []
 
 
-@router.post("/", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProjectOut, status_code=status.HTTP_201_CREATED)
 async def create_project(
     body: ProjectCreate,
     current_user: dict = Depends(get_current_user),
@@ -47,6 +42,7 @@ async def create_project(
     sb = get_supabase_admin()
     payload = body.model_dump()
     payload["created_by"] = current_user["id"]
+    payload["org_id"] = current_user["org_id"]
     result = sb.table("projects").insert(payload).execute()
     if not result.data:
         raise HTTPException(status_code=500, detail="Failed to create project")

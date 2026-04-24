@@ -95,7 +95,7 @@ export function Sidebar() {
   async function handleLogout() {
     await supabase.auth.signOut();
     clearUser();
-    router.push('/login');
+    router.push('/');
     toast('Logged out successfully', 'info');
   }
 
@@ -160,11 +160,13 @@ export function Sidebar() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
             <div style={{
               width: '28px', height: '28px', minWidth: '28px',
-              background: '#fff',
-              borderRadius: '6px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px', fontWeight: 700, color: '#000',
-            }}>C</div>
+              background: '#fff', borderRadius: '6px',
+              display: 'grid', placeItems: 'center',
+            }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
             <span className="font-display" style={{ fontWeight: 700, fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Club Manager</span>
           </div>
         )}
@@ -198,7 +200,7 @@ export function Sidebar() {
               width: '100%', 
               justifyContent: collapsed ? 'center' : 'space-between', 
               borderRadius: 0,
-              paddingRight: collapsed ? '0' : '8px'
+              paddingRight: collapsed ? '0' : '12px'
             }}
             title={collapsed ? "Domains" : undefined}
           >

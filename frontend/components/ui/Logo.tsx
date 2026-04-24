@@ -7,28 +7,37 @@ interface LogoProps {
 }
 
 export function Logo({ size = 28, className = '', style }: LogoProps) {
-  // Use Tailwind's neutral-800 (#262626) as requested
-  const borderRadius = Math.max(6, Math.floor(size * 0.25)); // Scale border radius with size
-  const fontSize = Math.max(14, Math.floor(size * 0.55)); // Scale font size
+  const borderRadius = Math.max(6, Math.floor(size * 0.25));
+  const svgSize = Math.floor(size * 0.56);
 
   return (
     <div
-      className={`flex items-center justify-center flex-shrink-0 ${className}`}
+      className={className}
       style={{
         width: size,
         height: size,
         minWidth: size,
-        background: '#262626', // bg-neutral-800
+        background: '#fff',
         borderRadius: `${borderRadius}px`,
-        color: '#ffffff',
-        fontWeight: 800,
-        fontSize: `${fontSize}px`,
-        lineHeight: 1,
-        fontFamily: 'var(--font-display, var(--font-sans, system-ui))',
+        display: 'grid',
+        placeItems: 'center',
+        flexShrink: 0,
         ...style,
       }}
     >
-      C
+      <svg 
+        width={svgSize} 
+        height={svgSize} 
+        viewBox="0 0 24 24" 
+        fill="none" 
+        stroke="#000" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+        style={{ display: 'block' }}
+      >
+        <path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>
+      </svg>
     </div>
   );
 }

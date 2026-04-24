@@ -54,12 +54,29 @@ export function DashboardPresident() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
+      {/* Welcome */}
+      <div>
+        <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+          Hello, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
+        </h1>
+        <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontFamily: 'Satoshi, sans-serif' }}>
+          Executive overview of the organization
+        </p>
+      </div>
+
       {/* Analytics Strip Top */}
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>Executive Overview</h1>
+        <h2 className="section-title" style={{ marginBottom: '16px' }}>Performance Overview</h2>
         {tasksLoading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
-          : <StatsRow tasks={tasks} />
+          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+          : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
+              <StatCard label="Total Tasks" value={tasks.length} />
+              <StatCard label="Pending Members" value={pendingUsers.length} accent="var(--color-pending)" />
+              <StatCard label="Active Projects" value={projects.length} accent="var(--color-brand)" />
+              <StatCard label="Completion Rate" value={`${tasks.length > 0 ? Math.round((tasks.filter((t: Task) => t.status === 'completed').length / tasks.length) * 100) : 0}%`} />
+            </div>
+          )
         }
       </div>
 
@@ -194,10 +211,12 @@ export function DashboardLead() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>
-          {myDomain?.name ?? 'Your Domain'}
+        <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+          {myDomain?.name ?? 'Domain Overview'}
         </h1>
-        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>Domain Lead overview</p>
+        <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontFamily: 'Satoshi, sans-serif' }}>
+          Lead oversight · {tasks.length} active tasks
+        </p>
       </div>
 
       {isLoading

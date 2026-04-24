@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useAuthHydration } from '@/hooks/useAuthHydration';
 import { useAppStore } from '@/lib/store';
 import { AdminShell } from '@/components/admin/AdminShell';
@@ -15,17 +15,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { hydrated } = useAuthHydration();
   const { role } = useAppStore();
   const router = useRouter();
+  const pathname = usePathname();
+  const isWorkspace = pathname.startsWith('/workspace');
+  const isAnalytics = pathname.startsWith('/analytics');
+  const isDashboard = pathname.startsWith('/dashboard');
+  const isAllowed = !!role && (ADMIN_ROLES.includes(role) || (role === 'member' && (isWorkspace || isAnalytics || isDashboard)));
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!role || !ADMIN_ROLES.includes(role)) {
+    if (!isAllowed) {
       // Members and unapproved users get redirected to the member board
       router.replace('/board');
     }
-  }, [hydrated, role, router]);
+  }, [hydrated, isAllowed, router]);
 
   // Show nothing while checking auth / redirecting
-  if (!hydrated || !role || !ADMIN_ROLES.includes(role)) {
+  if (!hydrated || !isAllowed) {
     return null;
   }
 

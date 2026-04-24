@@ -1,6 +1,6 @@
 'use client';
 
-import { AppShell } from '@/components/layout/AppShell';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
@@ -161,7 +161,7 @@ function ProjectModal({ domainId, project, onClose, onSuccess }: { domainId: str
 export default function DomainWorkspacePage({ params }: Props) {
   const { hydrated } = useAuthHydration();
   const { domainId } = use(params);
-  const { role } = useAppStore();
+  const { user, role } = useAppStore();
   const { toast } = useToast();
   const router = useRouter();
   const qc = useQueryClient();
@@ -172,7 +172,8 @@ export default function DomainWorkspacePage({ params }: Props) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const isAdmin = ['president', 'vp', 'secretary'].includes(role ?? '');
-  const canManage = isAdmin || role === 'lead';
+  const isLeadOfThisDomain = role === 'lead' && String(user?.domain_id) === String(domainId);
+  const canManage = isAdmin || isLeadOfThisDomain;
 
   const { data: domain } = useQuery<Domain>({
     queryKey: ['domain', domainId],
@@ -229,11 +230,11 @@ export default function DomainWorkspacePage({ params }: Props) {
   }
 
   return (
-    <AppShell>
+    <>
       <div style={{ 
         display: 'flex', flexDirection: 'column', gap: '32px', minHeight: '100%',
         background: domainColor ? `radial-gradient(ellipse at 0% 0%, ${hexToRgba(domainColor, 0.07)} 0%, transparent 50%), var(--color-bg)` : 'var(--color-bg)',
-        margin: '-24px', padding: '24px' // Negate AppShell padding to let gradient bleed
+        margin: '-24px', padding: '24px' // Negate shell padding to let gradient bleed
       }}>
 
         {/* Back + header */}
@@ -376,6 +377,6 @@ export default function DomainWorkspacePage({ params }: Props) {
           onSubmit={() => { setSelectedTask(null); qc.invalidateQueries({ queryKey: ['tasks', domainId] }); }} 
         />
       )}
-    </AppShell>
+    </>
   );
 }

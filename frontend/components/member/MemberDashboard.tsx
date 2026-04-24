@@ -54,7 +54,7 @@ export function MemberDashboard() {
       {/* Header */}
       <div>
         <h1 style={{ fontSize: '28px', fontWeight: 700, marginBottom: '4px' }}>
-          Welcome back, {firstName}
+          Hello, {firstName} 👋
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
           {user?.role} · {domainName}
@@ -67,9 +67,10 @@ export function MemberDashboard() {
         <>
           {/* Row 1: Stat Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-            <StatCard label="My Tasks Total" value={totalTasks} />
+            <StatCard label="My Total Tasks" value={totalTasks} />
+            <StatCard label="Pending" value={statusCounts.pending} accent="var(--color-pending)" />
             <StatCard label="Completed" value={completedTasks} accent="var(--color-completed)" />
-            <StatCard label="High/Critical Priority" value={highPriority} accent="var(--color-critical)" />
+            <StatCard label="High Priority" value={highPriority} accent="var(--color-critical)" />
           </div>
 
           {/* Row 2: Deadline Alert */}

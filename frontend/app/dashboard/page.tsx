@@ -2,7 +2,8 @@
 
 import { AppShell } from '@/components/layout/AppShell';
 import { useAppStore } from '@/lib/store';
-import { DashboardPresident, DashboardMember, DashboardLead } from '@/components/dashboard/DashboardViews';
+import { AdminDashboard } from '@/components/admin/AdminDashboard';
+import { MemberDashboard } from '@/components/member/MemberDashboard';
 import { useAuthHydration } from '@/hooks/useAuthHydration';
 
 export default function DashboardPage() {
@@ -27,11 +28,10 @@ export default function DashboardPage() {
       case 'president':
       case 'vp':
       case 'secretary':
-        return <DashboardPresident />;
       case 'lead':
-        return <DashboardLead />;
+        return <AdminDashboard />;
       default:
-        return <DashboardMember />;
+        return <MemberDashboard />;
     }
   };
 

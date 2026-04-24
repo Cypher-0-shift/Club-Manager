@@ -23,9 +23,14 @@ function DashboardAdmin() {
   const queryClient = useQueryClient();
   const [dismissedBanner, setDismissedBanner] = useState(false);
 
+  const { data: org } = useQuery({
+    queryKey: ['org'],
+    queryFn: () => api.get('/users/org').then(r => r.data),
+  });
+
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: QK.tasks.all(),
-    queryFn: () => api.get('/tasks?limit=200').then(r => r.data),
+    queryFn: () => api.get('/tasks?limit=5000').then(r => r.data),
   });
 
   const { data: domains = [], isLoading: domainsLoading } = useQuery({
@@ -35,12 +40,12 @@ function DashboardAdmin() {
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
-    queryFn: () => api.get('/projects').then(r => r.data),
+    queryFn: () => api.get('/projects?limit=5000').then(r => r.data),
   });
 
   const { data: pendingUsers = [], isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ['pending-users'],
-    queryFn: () => api.get('/users?is_approved=false').then(r => r.data),
+    queryFn: () => api.get('/users?is_approved=false&limit=5000').then(r => r.data),
   });
 
   const totalTasks = tasks.length;
@@ -51,15 +56,42 @@ function DashboardAdmin() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
+      {/* Welcome & Org Info */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+            Hello, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
+          </h1>
+          <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontFamily: 'Satoshi, sans-serif' }}>
+            Executive overview of {org?.name || 'the organization'}
+          </p>
+        </div>
+
+        {org?.join_code && (
+          <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '12px', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Join Code</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '18px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--color-brand)' }}>{org.join_code}</span>
+              <button 
+                onClick={() => { navigator.clipboard.writeText(org.join_code); toast('Code copied!', 'success'); }}
+                style={{ background: 'none', border: 'none', color: 'var(--color-text-muted)', cursor: 'pointer', display: 'flex', padding: '4px' }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Analytics Strip */}
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>Executive Overview</h1>
+        <h2 className="section-title" style={{ marginBottom: '16px' }}>Performance Overview</h2>
         {tasksLoading || usersLoading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
           : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
               <StatCard label="Total Tasks" value={totalTasks} />
-              <StatCard label="Completion Rate" value={`${completionRate}%`} accent="var(--color-brand)" />
+              <StatCard label="Completion Rate" value={`${completionRate}%`} />
               <StatCard label="Overdue" value={overdueTasks} accent="var(--color-overdue)" />
               <StatCard label="Pending Approval" value={pendingUsers.length} accent="var(--color-pending)" />
             </div>
@@ -114,13 +146,13 @@ function DashboardLead() {
 
   const { data: tasks = [], isLoading: tasksLoading } = useQuery({
     queryKey: ['tasks', 'domain', domainId],
-    queryFn: () => api.get(`/tasks?domain_id=${domainId}`).then(r => r.data),
+    queryFn: () => api.get(`/tasks?domain_id=${domainId}&limit=5000`).then(r => r.data),
     enabled: !!domainId,
   });
 
   const { data: members = [], isLoading: membersLoading } = useQuery<User[]>({
     queryKey: ['users', 'domain', domainId],
-    queryFn: () => api.get(`/users?domain_id=${domainId}`).then(r => r.data),
+    queryFn: () => api.get(`/users?domain_id=${domainId}&limit=5000`).then(r => r.data),
     enabled: !!domainId,
   });
 
@@ -145,11 +177,20 @@ function DashboardLead() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
       
+      <div>
+        <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>
+          Hello, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
+        </h1>
+        <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontFamily: 'Satoshi, sans-serif' }}>
+          Lead oversight · {totalTasks} active tasks
+        </p>
+      </div>
+
       {/* Domain Stats Strip */}
       <div>
-        <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>Domain Overview</h1>
+        <h2 className="section-title" style={{ marginBottom: '16px' }}>Domain Overview</h2>
         {tasksLoading || membersLoading
-          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+          ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>{[0,1,2,3].map(i => <SkeletonCard key={i} />)}</div>
           : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
               <StatCard label="Tasks in Domain" value={totalTasks} />

@@ -1,0 +1,58 @@
+# ═══════════════════════════════════════════════════════════
+# Club Task Manager - Backend Development Requirements
+# ═══════════════════════════════════════════════════════════
+# Install with: pip install -r requirements-dev.txt
+
+# Include production requirements
+-r requirements.txt
+
+# ─────────────────────────────────────────────
+# Testing
+# ─────────────────────────────────────────────
+pytest==8.3.4
+pytest-asyncio==0.25.0
+pytest-cov==6.0.0
+pytest-mock==3.14.0
+httpx==0.28.1  # For testing async clients
+
+# ─────────────────────────────────────────────
+# Code Quality & Linting
+# ─────────────────────────────────────────────
+ruff==0.8.4
+black==24.10.0
+isort==5.13.2
+mypy==1.13.0
+pylint==3.3.2
+
+# ─────────────────────────────────────────────
+# Type Stubs
+# ─────────────────────────────────────────────
+types-redis==4.6.0.20241004
+types-python-dateutil==2.9.0.20241003
+types-pytz==2024.2.0.20241003
+types-bleach==6.2.0.20241106
+
+# ─────────────────────────────────────────────
+# Development Tools
+# ─────────────────────────────────────────────
+ipython==8.30.0
+ipdb==0.13.13
+watchdog==6.0.0
+
+# ─────────────────────────────────────────────
+# Documentation
+# ─────────────────────────────────────────────
+mkdocs==1.6.1
+mkdocs-material==9.5.47
+
+# ─────────────────────────────────────────────
+# Database Tools
+# ─────────────────────────────────────────────
+alembic==1.14.0  # If using migrations
+psycopg2-binary==2.9.10  # Direct PostgreSQL access
+
+# ─────────────────────────────────────────────
+# Performance Profiling
+# ─────────────────────────────────────────────
+py-spy==0.3.14
+memory-profiler==0.61.0

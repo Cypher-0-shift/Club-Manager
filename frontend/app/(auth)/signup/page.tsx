@@ -119,36 +119,67 @@ export default function SignupPage() {
     }
     setLoading(true);
     try {
-      // 1) create Supabase auth user
-      const { error: signUpError, data: authData } = await supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: { 
-          data: { 
-            full_name: data.full_name,
-            role: 'member'
-          } 
-        },
-      });
-      if (signUpError) throw signUpError;
+      if (data.role === 'president') {
+        // ── President path: Next.js API route → FastAPI upgrade ──
+        const res = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: data.email,
+            password: data.password,
+            fullName: data.full_name,
+            orgName: data.org_name!,
+          }),
+        });
 
-      // 2) insert into public.users
-      const res = await api.post('/users', {
-        id: authData.user!.id,
-        email: data.email,
-        full_name: data.full_name,
-        role: data.role,
-        org_name: data.role === 'president' ? data.org_name : null,
-        join_code: data.role !== 'president' ? data.join_code : null,
-        domain_id: needsDomain ? data.domain_id ?? null : null,
-      });
+        const result = await res.json();
 
-      if (res.data.is_approved) {
-        setUser(res.data);
+        if (!res.ok) {
+          throw new Error(result.error ?? 'Signup failed');
+        }
+
+        if (result.partialSuccess) {
+          throw new Error(result.error ?? 'Account created but org setup failed');
+        }
+
+        // Hydrate Supabase browser session from the token returned by route
+        if (result.session) {
+          await supabase.auth.setSession(result.session);
+        }
+
+        toast('President account created!', 'success');
         router.push('/dashboard');
-        toast('Account created successfully!', 'success');
+
       } else {
-        router.push('/pending-approval');
+        // ── Non-president path: unchanged, goes directly through FastAPI ──
+        const { error: signUpError, data: authData } = await supabase.auth.signUp({
+          email: data.email,
+          password: data.password,
+          options: {
+            data: {
+              full_name: data.full_name,
+              role: 'member',
+            },
+          },
+        });
+        if (signUpError) throw signUpError;
+
+        const res = await api.post('/users', {
+          id: authData.user!.id,
+          email: data.email,
+          full_name: data.full_name,
+          role: data.role,
+          join_code: data.join_code ?? null,
+          domain_id: data.domain_id ?? null,
+        });
+
+        if (res.data.is_approved) {
+          setUser(res.data);
+          router.push('/dashboard');
+          toast('Account created successfully!', 'success');
+        } else {
+          router.push('/pending-approval');
+        }
       }
     } catch (err: unknown) {
       toast(err instanceof Error ? err.message : 'Signup failed', 'error');

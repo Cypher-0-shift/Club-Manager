@@ -1,3 +1,3 @@
-from app.routers import users, domains, projects, tasks
+from . import users, domains, projects, tasks, notifications, batch, onboarding
 
-__all__ = ["users", "domains", "projects", "tasks"]
+__all__ = ["users", "domains", "projects", "tasks", "notifications", "batch", "onboarding"]

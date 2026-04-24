@@ -1,7 +1,7 @@
 'use client';
 
 import { AppShell } from '@/components/layout/AppShell';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { Task, TaskStatus, TaskPriority, User, Domain } from '@/types';
@@ -11,8 +11,8 @@ import { useMemo } from 'react';
 import { format, subWeeks, startOfWeek, isAfter, isBefore } from 'date-fns';
 import { MemberAnalytics } from '@/components/member/MemberAnalytics';
 
-const STATUS_ORDER: TaskStatus[] = ['pending','in_progress','completed','overdue'];
-const PRIORITY_ORDER: TaskPriority[] = ['low','medium','high','critical'];
+const STATUS_ORDER: TaskStatus[] = ['pending', 'in_progress', 'completed', 'overdue'];
+const PRIORITY_ORDER: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
 const STATUS_COLORS: Record<TaskStatus, string> = {
   pending: 'var(--color-pending)',
   in_progress: 'var(--color-brand)',
@@ -52,27 +52,36 @@ function BarChart({ data, total, colorMap }: { data: [string, number][]; total: 
 export default function AnalyticsPage() {
   const { hydrated } = useAuthHydration();
   const { role } = useAppStore();
+  const qc = useQueryClient();
 
   const isAdmin = ['president', 'vp', 'secretary', 'lead'].includes(role ?? '');
   const isExec = ['president', 'vp', 'secretary'].includes(role ?? '');
 
-  const { data: tasks = [] } = useQuery<Task[]>({
+  const { data: tasks = [], isFetching: isFetchingTasks } = useQuery<Task[]>({
     queryKey: ['all-tasks'],
-    queryFn: () => api.get('/tasks?limit=2000').then(r => r.data),
+    queryFn: () => api.get('/tasks?limit=5000').then(r => r.data),
     enabled: hydrated && isAdmin,
   });
 
-  const { data: users = [] } = useQuery<User[]>({
+  const { data: users = [], isFetching: isFetchingUsers } = useQuery<User[]>({
     queryKey: ['all-users'],
-    queryFn: () => api.get('/users?limit=2000').then(r => r.data),
+    queryFn: () => api.get('/users?limit=5000').then(r => r.data),
     enabled: hydrated && isAdmin,
   });
 
-  const { data: domains = [] } = useQuery<Domain[]>({
+  const { data: domains = [], isFetching: isFetchingDomains } = useQuery<Domain[]>({
     queryKey: ['all-domains'],
     queryFn: () => api.get('/domains').then(r => r.data),
     enabled: hydrated && isAdmin,
   });
+
+  const isSyncing = isFetchingTasks || isFetchingUsers || isFetchingDomains;
+
+  const handleSync = () => {
+    qc.invalidateQueries({ queryKey: ['all-tasks'] });
+    qc.invalidateQueries({ queryKey: ['all-users'] });
+    qc.invalidateQueries({ queryKey: ['all-domains'] });
+  };
 
   const byStatus = useMemo(() => STATUS_ORDER.map(s => [s, tasks.filter(t => t.status === s).length] as [string, number]), [tasks]);
   const byPriority = useMemo(() => PRIORITY_ORDER.map(p => [p, tasks.filter(t => t.priority === p).length] as [string, number]), [tasks]);
@@ -105,9 +114,9 @@ export default function AnalyticsPage() {
   const timelineStats = useMemo(() => {
     const last8Weeks = Array.from({ length: 8 }).map((_, i) => startOfWeek(subWeeks(new Date(), 7 - i)));
     const counts = last8Weeks.map(weekStart => {
-      const count = tasks.filter(t => 
-        t.status === 'completed' && 
-        isAfter(new Date(t.updated_at), weekStart) && 
+      const count = tasks.filter(t =>
+        t.status === 'completed' &&
+        isAfter(new Date(t.updated_at), weekStart) &&
         isBefore(new Date(t.updated_at), subWeeks(weekStart, -1))
       ).length;
       return { label: format(weekStart, 'MMM d'), count };
@@ -117,6 +126,10 @@ export default function AnalyticsPage() {
   }, [tasks]);
 
   if (!hydrated) {
+    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-bg)' }}><div className="spinner" /></div>;
+  }
+
+  if (!role) {
     return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--color-bg)' }}><div className="spinner" /></div>;
   }
 
@@ -131,14 +144,27 @@ export default function AnalyticsPage() {
   return (
     <AppShell>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        <div>
-          <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#e5e5e5' }}>Analytics</h1>
-          <p className="section-subtitle">Club-wide task metrics</p>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <h1 style={{ fontSize: '18px', fontWeight: 700, color: '#e5e5e5' }}>Analytics</h1>
+            <p className="section-subtitle">Club-wide task metrics</p>
+          </div>
+          <button
+            className={`btn ${isSyncing ? 'btn-secondary' : 'btn-primary'}`}
+            onClick={handleSync}
+            disabled={isSyncing}
+            style={{ gap: '8px', padding: '8px 16px', fontSize: '13px' }}
+          >
+            <div className={isSyncing ? 'animate-spin' : ''} style={{ display: 'flex', alignItems: 'center' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /></svg>
+            </div>
+            {isSyncing ? 'Syncing...' : 'Sync Data'}
+          </button>
         </div>
 
         {/* Row 1: Key stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px' }}>
-          <StatCard label="Total Org Tasks" value={tasks.length} />
+          <StatCard label="Total Tasks" value={tasks.length} />
           <StatCard label="Completion Rate" value={`${completionRate}%`} accent="var(--color-completed)" />
           <StatCard label="Total Overdue" value={tasks.filter(t => t.is_overdue || t.status === 'overdue').length} accent="var(--color-overdue)" />
           <StatCard label="Critical Priority" value={tasks.filter(t => t.priority === 'critical').length} accent="#ef4444" />
@@ -240,10 +266,10 @@ export default function AnalyticsPage() {
             {timelineStats.counts.map(c => (
               <div key={c.label} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', height: '100%' }}>
                 <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', width: '100%', background: 'rgba(255,255,255,0.06)', borderRadius: '4px 4px 0 0', overflow: 'hidden' }}>
-                  <div style={{ 
-                    width: '100%', 
-                    height: `${(c.count / timelineStats.maxCount) * 100}%`, 
-                    background: 'var(--color-brand)', 
+                  <div style={{
+                    width: '100%',
+                    height: `${(c.count / timelineStats.maxCount) * 100}%`,
+                    background: 'var(--color-brand)',
                     borderRadius: '4px 4px 0 0',
                     opacity: 0.8,
                     transition: 'height 0.5s ease'

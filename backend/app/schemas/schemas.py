@@ -18,6 +18,14 @@ class UserCreate(BaseModel):
     full_name: str
     role: UserRole = "member"
     domain_id: Optional[str] = None
+    org_name: Optional[str] = None  # For president
+    join_code: Optional[str] = None # For others
+
+class OrganizationOut(BaseModel):
+    id: str
+    name: str
+    join_code: str
+    created_at: datetime
 
 
 class UserUpdate(BaseModel):
@@ -31,6 +39,7 @@ class UserOut(BaseModel):
     email: str
     full_name: str
     role: UserRole
+    org_id: Optional[str]
     domain_id: Optional[str]
     is_approved: bool
     avatar_url: Optional[str]

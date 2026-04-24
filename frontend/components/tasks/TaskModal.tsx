@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Task, Message, TaskPriority, TaskStatus, User } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
@@ -23,16 +23,24 @@ const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string }[] 
   { value: 'critical', label: 'Critical', color: '#ef4444' },
 ];
 
-function MessageThread({ taskId }: { taskId: string }) {
+function MessageThread({ taskId, users }: { taskId: string; users: User[] }) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [input, setInput] = useState('');
+  const [mentionSearch, setMentionSearch] = useState('');
+  const [mentionIndex, setMentionIndex] = useState(-1);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
 
   const { data: messages = [] } = useQuery<Message[]>({
     queryKey: ['messages', taskId],
     queryFn: () => api.get(`/tasks/${taskId}/messages`).then(r => r.data),
     refetchInterval: 5000,
   });
+
+  const filteredUsers = useMemo(() => {
+    if (mentionIndex === -1) return [];
+    return users.filter(u => u.full_name.toLowerCase().includes(mentionSearch.toLowerCase()));
+  }, [users, mentionSearch, mentionIndex]);
 
   const sendMutation = useMutation({
     mutationFn: (content: string) => api.post(`/tasks/${taskId}/messages`, { content }),
@@ -43,6 +51,33 @@ function MessageThread({ taskId }: { taskId: string }) {
     onError: (err: Error) => toast(err.message, 'error'),
   });
 
+  const insertMention = (user: User) => {
+    const before = input.substring(0, mentionIndex);
+    const after = input.substring(mentionIndex + mentionSearch.length + 1);
+    setInput(before + '@' + user.full_name + ' ' + after);
+    setMentionIndex(-1);
+    setMentionSearch('');
+  };
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    const pos = e.target.selectionStart;
+    setInput(val);
+
+    const lastAt = val.lastIndexOf('@', pos - 1);
+    if (lastAt !== -1) {
+      const textAfterAt = val.substring(lastAt + 1, pos);
+      if (!textAfterAt.includes(' ')) {
+        setMentionIndex(lastAt);
+        setMentionSearch(textAfterAt);
+        setSelectedMentionIndex(0);
+        return;
+      }
+    }
+    setMentionIndex(-1);
+    setMentionSearch('');
+  };
+
   function handleSend(e: React.FormEvent) {
     e.preventDefault();
     if (!input.trim()) return;
@@ -50,7 +85,7 @@ function MessageThread({ taskId }: { taskId: string }) {
   }
 
   function getAvatarColor(id: string) {
-    const colors = ['#3a3a3a','#444444','#3d3d3d','#424242','#404040','#3e3e3e'];
+    const colors = ['#3a3a3a', '#444444', '#3d3d3d', '#424242', '#404040', '#3e3e3e'];
     return colors[id.charCodeAt(0) % colors.length];
   }
 
@@ -80,21 +115,61 @@ function MessageThread({ taskId }: { taskId: string }) {
                 </span>
               </div>
               <div style={{ fontSize: '13px', color: 'var(--color-text-secondary)', background: 'rgba(255,255,255,0.04)', borderRadius: 'var(--radius-md)', padding: '10px 14px', lineHeight: 1.5, border: '1px solid rgba(255,255,255,0.06)' }}>
-                {m.content}
+                {m.content.split(/(@\w+ \w+|@\w+)/).map((part, i) =>
+                  part.startsWith('@') ? <span key={i} style={{ color: 'var(--color-brand)', fontWeight: 600 }}>{part}</span> : part
+                )}
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+      <form onSubmit={handleSend} style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0, position: 'relative' }}>
+        {filteredUsers.length > 0 && (
+          <div style={{
+            position: 'absolute', bottom: '100%', left: 0, right: 0,
+            background: '#1a1a1a', border: '1px solid var(--color-border-subtle)',
+            borderRadius: 'var(--radius-md)', marginBottom: '8px',
+            maxHeight: '200px', overflowY: 'auto', zIndex: 100,
+            boxShadow: '0 10px 15px -3px rgba(0,0,0,0.5)'
+          }}>
+            {filteredUsers.map((u, i) => (
+              <div
+                key={u.id}
+                onClick={() => insertMention(u)}
+                style={{
+                  padding: '8px 12px', cursor: 'pointer', fontSize: '13px',
+                  background: i === selectedMentionIndex ? 'rgba(255,255,255,0.05)' : 'transparent',
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  borderBottom: i < filteredUsers.length - 1 ? '1px solid rgba(255,255,255,0.03)' : 'none'
+                }}
+              >
+                <div className="avatar avatar-xs" style={{ background: '#333', fontSize: '10px' }}>{u.full_name[0]}</div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontWeight: 500 }}>{u.full_name}</span>
+                  <span style={{ fontSize: '10px', color: 'var(--color-text-muted)' }}>{u.role}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <textarea
           className="form-input"
           style={{ height: '100px', resize: 'none', fontSize: '13px' }}
-          placeholder="Share an update or tag someone..."
+          placeholder="Share an update or type @ to tag someone..."
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(e); } }}
+          onChange={handleInput}
+          onKeyDown={e => {
+            if (mentionIndex !== -1 && filteredUsers.length > 0) {
+              if (e.key === 'ArrowDown') { e.preventDefault(); setSelectedMentionIndex(s => (s + 1) % filteredUsers.length); }
+              else if (e.key === 'ArrowUp') { e.preventDefault(); setSelectedMentionIndex(s => (s - 1 + filteredUsers.length) % filteredUsers.length); }
+              else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); insertMention(filteredUsers[selectedMentionIndex]); }
+              else if (e.key === 'Escape') { setMentionIndex(-1); }
+            } else if (e.key === 'Enter' && !e.shiftKey) {
+              e.preventDefault();
+              handleSend(e);
+            }
+          }}
         />
         <button type="submit" className="btn btn-primary" disabled={!input.trim() || sendMutation.isPending} style={{ alignSelf: 'flex-end', width: '100%' }}>
           {sendMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : 'Send Message'}
@@ -109,7 +184,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
-  
+
   // Edit State
   const [editTitle, setEditTitle] = useState(task.title);
   const [editDesc, setEditDesc] = useState(task.description ?? '');
@@ -126,7 +201,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   const { data: users = [] } = useQuery<User[]>({
     queryKey: ['users', domainId],
     queryFn: () => api.get(`/users${domainId ? `?domain_id=${domainId}` : ''}`).then(r => r.data),
-    enabled: editing && !!role,
+    enabled: !!role,
   });
 
   const { data: submissions = [] } = useQuery({
@@ -145,6 +220,16 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     onError: (err: Error) => toast(err.message, 'error'),
   });
 
+  const statusMutation = useMutation({
+    mutationFn: (status: TaskStatus) => api.patch(`/tasks/${task.id}/status`, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      qc.invalidateQueries({ queryKey: ['my-tasks'] });
+      toast('Status updated', 'success');
+    },
+    onError: (err: Error) => toast(err.message, 'error'),
+  });
+
   function handleSaveEdit() {
     updateMutation.mutate({
       title: editTitle,
@@ -157,13 +242,13 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   }
 
   function handleUpdateStatus(status: TaskStatus) {
-    updateMutation.mutate({ status });
+    statusMutation.mutate(status);
   }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-panel task-modal-panel" style={{ width: '100%', maxWidth: '960px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: 'var(--radius-lg)', background: '#000000' }} onClick={e => e.stopPropagation()}>
-        
+
         {/* Header - Simple Close Button */}
         <div style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}>
           <button className="btn-ghost btn-icon" onClick={onClose}>×</button>
@@ -171,10 +256,10 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
         {/* Content Split */}
         <div className="task-modal-split" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          
+
           {/* Left Panel - 60% */}
           <div className="task-modal-left" style={{ flex: '0 0 60%', padding: '32px 24px', overflowY: 'auto', borderRight: '1px solid var(--color-border-subtle)', display: 'flex', flexDirection: 'column', gap: '24px', background: '#000000' }}>
-            
+
             {/* Title & Status */}
             <div>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
@@ -185,7 +270,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                 </span>
                 {task.is_overdue && <span className="badge badge-overdue">⚠ OVERDUE</span>}
               </div>
-              
+
               {editing ? (
                 <input
                   className="form-input"
@@ -194,7 +279,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                   style={{ fontSize: '24px', fontWeight: 700, padding: '8px 12px', width: '100%' }}
                 />
               ) : (
-                <h1 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.3, cursor: canModify ? 'pointer' : 'default' }} onClick={() => { if(canModify) setEditing(true); }}>
+                <h1 style={{ fontSize: '24px', fontWeight: 700, lineHeight: 1.3, cursor: canModify ? 'pointer' : 'default' }} onClick={() => { if (canModify) setEditing(true); }}>
                   {task.title}
                 </h1>
               )}
@@ -202,11 +287,11 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
             {/* Metadata Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-              
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}><UserIcon size={16} /></div>
                 <div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Assignee</div>
+                  <div style={{ fontSize: '14px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Assignee</div>
                   {editing ? (
                     <select className="form-input" value={editAssignee} onChange={e => setEditAssignee(e.target.value)} style={{ padding: '2px 6px', fontSize: '13px', marginTop: '4px' }}>
                       <option value="">Unassigned</option>
@@ -221,7 +306,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}><FolderOpen size={16} /></div>
                 <div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Project</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Project</div>
                   <div style={{ fontSize: '13px', fontWeight: 500 }}>{task.project?.name || '—'}</div>
                 </div>
               </div>
@@ -229,7 +314,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--color-text-muted)' }}><Clock size={16} /></div>
                 <div>
-                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Deadline</div>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>Deadline</div>
                   {editing ? (
                     <input type="datetime-local" className="form-input" value={editDeadline} onChange={e => setEditDeadline(e.target.value)} style={{ padding: '2px 6px', fontSize: '13px', marginTop: '4px' }} />
                   ) : (
@@ -239,12 +324,12 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                   )}
                 </div>
               </div>
-              
+
             </div>
 
             {/* Description */}
             <div>
-              <h3 style={{ fontSize: '13px', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '12px' }}>Description</h3>
+              <h3 style={{ fontSize: '14px', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Description</h3>
               {editing ? (
                 <textarea
                   className="form-input"
@@ -296,14 +381,14 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
 
           {/* Right Panel - 40% */}
           <div className="task-modal-right" style={{ flex: '0 0 40%', padding: '32px 24px', background: '#0d0d0d', display: 'flex', flexDirection: 'column' }}>
-            <MessageThread taskId={task.id} />
+            <MessageThread taskId={task.id} users={users} />
           </div>
 
         </div>
 
         {/* Footer Actions */}
         <div style={{ padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.07)', background: '#000000', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          
+
           <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
             Created by {task.creator?.full_name}
           </div>
@@ -323,12 +408,37 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                     <Paperclip size={16} /> Submit Proof
                   </button>
                 )}
+
+                {/* Member Specific Actions */}
+                {user?.id === task.assignee_id && (
+                   <div style={{ display: 'flex', gap: '8px' }}>
+                     {task.status === 'pending' && (
+                       <button 
+                         className="btn btn-primary" 
+                         onClick={() => handleUpdateStatus('in_progress')}
+                         style={{ background: 'var(--color-brand)', borderColor: 'var(--color-brand)' }}
+                       >
+                         Start Task
+                       </button>
+                     )}
+                     {task.status === 'in_progress' && (
+                       <button 
+                         className="btn btn-primary" 
+                         onClick={() => handleUpdateStatus('completed')}
+                         style={{ background: '#22c55e', borderColor: '#22c55e' }}
+                       >
+                         Mark Completed
+                       </button>
+                     )}
+                   </div>
+                )}
+
                 {canModify && (
                   <div style={{ display: 'flex', gap: '8px' }}>
-                    <select 
-                      className="form-input" 
-                      value={task.status} 
-                      onChange={e => handleUpdateStatus(e.target.value as TaskStatus)} 
+                    <select
+                      className="form-input"
+                      value={task.status}
+                      onChange={e => handleUpdateStatus(e.target.value as TaskStatus)}
                       style={{ padding: '6px 12px', height: 'auto', width: '140px' }}
                     >
                       <option value="pending">Pending</option>

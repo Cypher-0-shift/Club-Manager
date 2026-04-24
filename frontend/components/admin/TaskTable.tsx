@@ -19,34 +19,13 @@ type SortField = 'title' | 'status' | 'priority' | 'deadline' | 'assignee' | 'pr
  * Used in workspace domain pages for leads and above.
  */
 export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | 'all'>('all');
-  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | 'all'>('all');
   const [sortField, setSortField] = useState<SortField>('deadline');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-
-  const { data: allDomains = [] } = useQuery<any[]>({
-    queryKey: ['domains'],
-    queryFn: () => api.get('/domains').then(r => r.data),
-  });
-
-  const domainColorMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    allDomains.forEach(d => { map[d.id] = d.color_hex; });
-    return map;
-  }, [allDomains]);
-
   const priorityWeight = { critical: 4, high: 3, medium: 2, low: 1 };
   const statusWeight = { overdue: 4, in_progress: 3, pending: 2, completed: 1 };
 
   const filteredTasks = useMemo(() => {
-    return tasks.filter(t => {
-      const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) ||
-        (t.description?.toLowerCase().includes(search.toLowerCase()) ?? false);
-      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || t.priority === priorityFilter;
-      return matchesSearch && matchesStatus && matchesPriority;
-    }).sort((a, b) => {
+    return [...tasks].sort((a, b) => {
       let comparison = 0;
       if (sortField === 'title') comparison = a.title.localeCompare(b.title);
       else if (sortField === 'status') comparison = statusWeight[a.status] - statusWeight[b.status];
@@ -56,7 +35,7 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
       else if (sortField === 'project') comparison = (a.project?.name || '').localeCompare(b.project?.name || '');
       return sortOrder === 'asc' ? comparison : -comparison;
     });
-  }, [tasks, search, statusFilter, priorityFilter, sortField, sortOrder]);
+  }, [tasks, sortField, sortOrder]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) {
@@ -78,46 +57,6 @@ export function TaskTable({ tasks, onTaskClick }: TaskTableProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-
-      {/* Filters Toolbar */}
-      <div style={{
-        display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap',
-        background: 'rgba(255,255,255,0.02)', padding: '12px',
-        borderRadius: 'var(--radius-md)', border: '1px solid rgba(255,255,255,0.07)'
-      }}>
-        <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
-          <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-          <input
-            className="form-input"
-            placeholder="Search tasks..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ paddingLeft: '36px' }}
-          />
-        </div>
-
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <select className="form-input" value={statusFilter} onChange={e => setStatusFilter(e.target.value as any)} style={{ width: 'auto', fontSize: '13px' }}>
-            <option value="all">Status</option>
-            <option value="pending">Pending</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-            <option value="overdue">Overdue</option>
-          </select>
-
-          <select className="form-input" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value as any)} style={{ width: 'auto', fontSize: '13px' }}>
-            <option value="all">Priority</option>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-            <option value="critical">Critical</option>
-          </select>
-        </div>
-
-        <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
-          Showing {filteredTasks.length} tasks
-        </div>
-      </div>
 
       {/* Table */}
       <div style={{ padding: 0, overflow: 'hidden', background: '#262626', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '10px' }}>

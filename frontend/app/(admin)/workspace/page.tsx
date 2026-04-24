@@ -1,6 +1,6 @@
 'use client';
 
-import { AppShell } from '@/components/layout/AppShell';
+
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
@@ -107,8 +107,7 @@ export default function WorkspacePage() {
   }
 
   return (
-    <AppShell>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h1 className="section-title" style={{ fontSize: '18px' }}>Workspace</h1>
@@ -131,11 +130,9 @@ export default function WorkspacePage() {
                 No domains yet. {canManage ? 'Create the first one!' : 'Ask your president to create a domain.'}
               </div>
         }
-      </div>
-
       {showCreate && canManage && (
         <CreateDomainModal onClose={() => setShowCreate(false)} onSuccess={() => setShowCreate(false)} />
       )}
-    </AppShell>
+    </div>
   );
 }

@@ -1,0 +1,39 @@
+# Club Task Manager - Backend Requirements
+# Generated from pyproject.toml
+
+# Core Framework
+fastapi==0.115.5
+uvicorn[standard]==0.34.0
+pydantic[email]==2.10.3
+pydantic-settings==2.7.0
+
+# Authentication & Security (PHASE 3)
+python-jose[cryptography]==3.3.0
+cryptography==44.0.0
+bleach==6.2.0
+
+# HTTP & API
+httpx==0.28.1
+python-multipart==0.0.20
+
+# Database & Supabase
+supabase==2.15.0
+
+# Caching (PHASE 2)
+redis[hiredis]==5.2.1
+hiredis==3.0.0
+
+# File Validation (PHASE 1)
+python-magic==0.4.27
+python-magic-bin==0.4.14; sys_platform == 'win32'
+
+# Logging & Monitoring
+loguru==0.7.3
+
+# Rate Limiting (PHASE 3)
+slowapi==0.1.9
+limits==3.13.0
+
+# Additional Utilities
+python-dateutil==2.9.0
+pytz==2024.2
