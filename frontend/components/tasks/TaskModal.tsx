@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Task, Message, TaskPriority, TaskStatus, User } from '@/types';
+import { Task, Message, TaskPriority, TaskStatus, User, Submission } from '@/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
@@ -204,7 +204,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
     enabled: !!role,
   });
 
-  const { data: submissions = [] } = useQuery({
+  const { data: submissions = [] } = useQuery<Submission[]>({
     queryKey: ['submissions', task.id],
     queryFn: () => api.get(`/tasks/${task.id}/submissions`).then(r => r.data),
   });
@@ -356,7 +356,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                   <Paperclip size={14} /> Proof of Work ({submissions.length})
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {submissions.map((s: any) => (
+                  {submissions.map((s: Submission) => (
                     <div key={s.id} className="card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: '8px' }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 500, display: 'flex', gap: '8px', alignItems: 'center' }}>

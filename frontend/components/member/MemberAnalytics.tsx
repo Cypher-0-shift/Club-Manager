@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
-import { Task, Domain } from '@/types';
+import { Task, Domain, Submission } from '@/types';
 import { StatsRow, SkeletonCard } from '@/components/dashboard/StatCard';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -20,8 +20,19 @@ export function MemberAnalytics() {
     enabled: !!user,
   });
 
+  interface AnalyticsResponse {
+    total: number;
+    completed: number;
+    overdue: number;
+    by_status: Record<string, number>;
+    by_priority: Record<string, number>;
+    completion_rate: number;
+    is_org_wide: boolean;
+    submissions: any[];
+  }
+
   // 2. Fetch specialized member analytics data
-  const { data: analytics, isLoading, error } = useQuery({
+  const { data: analytics, isLoading, error } = useQuery<AnalyticsResponse>({
     queryKey: ['analytics', 'me'],
     queryFn: () => api.get('/tasks/analytics/me').then(r => r.data),
     enabled: !!user,

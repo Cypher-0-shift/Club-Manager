@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { useToast } from '@/components/ui/Toast';
-import { User, Project, Task } from '@/types';
+import { User, Project, Task, Domain, Organization } from '@/types';
 import { StatCard, SkeletonCard } from '@/components/dashboard/StatCard';
 import { DomainCardGrid } from '@/components/dashboard/DomainCard';
 import { QK } from '@/lib/queryKeys';
@@ -23,17 +23,17 @@ function DashboardAdmin() {
   const queryClient = useQueryClient();
   const [dismissedBanner, setDismissedBanner] = useState(false);
 
-  const { data: org } = useQuery({
+  const { data: org } = useQuery<Organization>({
     queryKey: ['org'],
     queryFn: () => api.get('/users/org').then(r => r.data),
   });
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: QK.tasks.all(),
     queryFn: () => api.get('/tasks?limit=5000').then(r => r.data),
   });
 
-  const { data: domains = [], isLoading: domainsLoading } = useQuery({
+  const { data: domains = [], isLoading: domainsLoading } = useQuery<Domain[]>({
     queryKey: QK.domains.all(),
     queryFn: () => api.get('/domains').then(r => r.data),
   });
@@ -144,7 +144,7 @@ function DashboardLead() {
 
   const domainId = user?.domain_id;
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: ['tasks', 'domain', domainId],
     queryFn: () => api.get(`/tasks?domain_id=${domainId}&limit=5000`).then(r => r.data),
     enabled: !!domainId,

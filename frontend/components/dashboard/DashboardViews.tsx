@@ -22,12 +22,12 @@ export function DashboardPresident() {
   const queryClient = useQueryClient();
   const [dismissedBanner, setDismissedBanner] = useState(false);
 
-  const { data: tasks = [], isLoading: tasksLoading } = useQuery({
+  const { data: tasks = [], isLoading: tasksLoading } = useQuery<Task[]>({
     queryKey: QK.tasks.all(),
     queryFn: () => api.get('/tasks').then(r => r.data),
   });
 
-  const { data: domains = [], isLoading: domainsLoading } = useQuery({
+  const { data: domains = [], isLoading: domainsLoading } = useQuery<Domain[]>({
     queryKey: QK.domains.all(),
     queryFn: () => api.get('/domains').then(r => r.data),
   });
@@ -121,7 +121,7 @@ export function DashboardPresident() {
 export function DashboardMember() {
   const { user } = useAppStore();
 
-  const { data: myTasks = [], isLoading } = useQuery({
+  const { data: myTasks = [], isLoading } = useQuery<Task[]>({
     queryKey: QK.tasks.mine(),
     queryFn: () => api.get('/tasks/my').then(r => r.data),
     enabled: !!user,
@@ -195,7 +195,7 @@ export function DashboardMember() {
 export function DashboardLead() {
   const { domainId } = useAppStore();
 
-  const { data: tasks = [], isLoading } = useQuery({
+  const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: QK.tasks.byDomain(domainId as string),
     queryFn: () => api.get(`/tasks?domain_id=${domainId}`).then(r => r.data),
     enabled: !!domainId,

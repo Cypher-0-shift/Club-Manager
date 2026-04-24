@@ -26,6 +26,13 @@ export interface Domain {
   updated_at: string;
 }
 
+export interface Organization {
+  id: string;
+  name: string;
+  join_code: string;
+  created_at: string;
+}
+
 export interface Project {
   id: string;
   name: string;
