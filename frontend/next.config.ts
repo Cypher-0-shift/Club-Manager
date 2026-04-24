@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
   poweredByHeader: false,
 
   // PHASE 4: Configure image optimization
