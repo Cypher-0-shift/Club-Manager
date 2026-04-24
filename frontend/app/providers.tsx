@@ -36,19 +36,21 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     // Check initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!session) {
+    supabase.auth.getSession().then((res) => {
+      if (!res.data.session) {
         clearUser();
       }
     });
 
     // Subscribe to auth events
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const authRes = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         clearUser();
         queryClient.clear();
       }
     });
+
+    const subscription = authRes.data.subscription;
 
     return () => subscription.unsubscribe();
   }, [clearUser, queryClient]);
