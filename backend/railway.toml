@@ -2,8 +2,13 @@
 builder = "NIXPACKS"
 
 [deploy]
-startCommand = "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"
-healthcheckPath = "/health"
+# Change 1: Use the simple $PORT variable without brackets
+startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1"
+
+# Change 2: Ensure this path actually exists in your main.py
+# If you don't have a "/health" route, change this to "/"
+healthcheckPath = "/" 
+
 healthcheckTimeout = 100
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5
