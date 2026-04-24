@@ -241,7 +241,7 @@
         "delete": false
       },
       "analytics": {
-        "read": false
+        "read": true
       },
       "settings": {
         "read": true,

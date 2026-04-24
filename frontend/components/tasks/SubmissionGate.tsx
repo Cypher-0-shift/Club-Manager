@@ -13,7 +13,15 @@ interface SubmissionGateProps {
 
 type Tab = 'file' | 'url' | 'text';
 
-const ALLOWED_TYPES = ['application/pdf','text/csv','application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+const ALLOWED_TYPES = [
+  'application/pdf',
+  'text/csv',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+  'image/webp'
+];
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
 
 export function SubmissionGate({ task, onClose, onSuccess }: SubmissionGateProps) {
@@ -117,7 +125,7 @@ export function SubmissionGate({ task, onClose, onSuccess }: SubmissionGateProps
                   ref={fileRef}
                   type="file"
                   style={{ display: 'none' }}
-                  accept=".pdf,.csv,.xlsx,.docx"
+                  accept=".pdf,.csv,.xlsx,.docx,.jpg,.jpeg,.png,.webp"
                   onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])}
                 />
                 {file ? (

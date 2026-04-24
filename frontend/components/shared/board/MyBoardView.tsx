@@ -17,13 +17,19 @@ import {
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 
 export function MyBoardView() {
-  const { user, boardFilters, setBoardFilter, clearBoardFilters } = useAppStore();
+  const { user, role, boardFilters, setBoardFilter, clearBoardFilters } = useAppStore();
   const { toast } = useToast();
   const qc = useQueryClient();
 
+  const isPresident = role === 'president';
+
+  // President sees all organization tasks, others see only their assigned tasks
   const { data: myTasks = [], isLoading } = useQuery<Task[]>({
-    queryKey: ['my-tasks'],
-    queryFn: () => api.get('/tasks/my').then(r => r.data),
+    queryKey: isPresident ? ['all-tasks'] : ['my-tasks'],
+    queryFn: () => {
+      const endpoint = isPresident ? '/tasks?limit=5000' : '/tasks/my';
+      return api.get(endpoint).then(r => r.data);
+    },
     enabled: !!user,
   });
 
@@ -72,7 +78,10 @@ export function MyBoardView() {
   const updateStatusMutation = useMutation({
     mutationFn: ({ taskId, status }: { taskId: string; status: TaskStatus }) => 
       api.patch(`/tasks/${taskId}/status`, { status }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['my-tasks'] }),
+    onSuccess: () => {
+      const queryKey = isPresident ? ['all-tasks'] : ['my-tasks'];
+      qc.invalidateQueries({ queryKey });
+    },
   });
 
   function handleDragEnd(event: DragEndEvent) {
@@ -93,7 +102,16 @@ export function MyBoardView() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', height: '100%' }}>
       
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>My Personal Board</h1>
+        <div>
+          <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>
+            {isPresident ? 'Organization Board' : 'My Personal Board'}
+          </h1>
+          {isPresident && (
+            <p style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px' }}>
+              All tasks across the organization
+            </p>
+          )}
+        </div>
       </div>
 
       <div style={{
@@ -103,7 +121,13 @@ export function MyBoardView() {
       }}>
         <div style={{ position: 'relative', flex: 1, minWidth: '200px' }}>
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-muted)' }} />
-          <input className="form-input" placeholder="Search my tasks..." value={search} onChange={e => setBoardFilter('search', e.target.value)} style={{ paddingLeft: '36px' }} />
+          <input 
+            className="form-input" 
+            placeholder={isPresident ? "Search all tasks..." : "Search my tasks..."} 
+            value={search} 
+            onChange={e => setBoardFilter('search', e.target.value)} 
+            style={{ paddingLeft: '36px' }} 
+          />
         </div>
         
         <select className="form-input" value={statusFilter} onChange={e => setBoardFilter('status', e.target.value)} style={{ width: 'auto', fontSize: '13px' }}>
@@ -169,7 +193,11 @@ export function MyBoardView() {
         <TaskModal 
           task={selectedTask} 
           onClose={() => setSelectedTask(null)} 
-          onSubmit={() => { setSelectedTask(null); qc.invalidateQueries({ queryKey: ['my-tasks'] }); }}
+          onSubmit={() => { 
+            setSelectedTask(null); 
+            const queryKey = isPresident ? ['all-tasks'] : ['my-tasks'];
+            qc.invalidateQueries({ queryKey }); 
+          }}
         />
       )}
     </div>

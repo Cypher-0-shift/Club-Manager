@@ -9,7 +9,7 @@ import { api } from '@/lib/api';
 import { Domain } from '@/types';
 import { 
   LayoutDashboard, KanbanSquare as Kanban, 
-  BarChart3, Settings, LogOut, ChevronRight, ChevronLeft
+  BarChart3, Settings, LogOut, ChevronRight, ChevronLeft, FolderKanban
 } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
 
@@ -105,6 +105,18 @@ export function MemberSidebar() {
         <a href="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Dashboard" : undefined}>
           <LayoutDashboard size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dashboard</span>}
         </a>
+
+        {myDomain && (
+          <a href={`/workspace/${myDomain.id}`} className={`nav-item ${isActive(`/workspace/${myDomain.id}`) ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? myDomain.name : undefined}>
+            <FolderKanban size={16} /> 
+            {!collapsed && (
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: myDomain.color_hex, flexShrink: 0 }} />
+                {myDomain.name}
+              </span>
+            )}
+          </a>
+        )}
 
         <a href="/board" className={`nav-item ${isActive('/board') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "My Board" : undefined}>
           <Kanban size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>My Board</span>}

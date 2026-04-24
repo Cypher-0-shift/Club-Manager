@@ -83,12 +83,12 @@ function WorkspaceContent() {
     enabled: hydrated && !!role,
   });
 
-  const { domainId: userDomainId } = useAppStore();
+  const { user, domainId: userDomainId } = useAppStore();
   const isExec = ['president', 'vp', 'secretary'].includes(role ?? '');
   
   const domainsToDisplay = isExec 
     ? domains 
-    : domains.filter(d => d.id === userDomainId);
+    : domains.filter(d => String(d.id).toLowerCase() === String(user?.domain_id || userDomainId || '').toLowerCase());
 
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ['projects'],

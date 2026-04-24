@@ -193,7 +193,7 @@ export function DashboardMember() {
 }
 
 export function DashboardLead() {
-  const { domainId } = useAppStore();
+  const { domainId, user } = useAppStore();
 
   const { data: tasks = [], isLoading } = useQuery<Task[]>({
     queryKey: QK.tasks.byDomain(domainId as string),
@@ -212,10 +212,10 @@ export function DashboardLead() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       <div>
         <h1 className="font-display" style={{ fontSize: '32px', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '4px' }}>
-          {myDomain?.name ?? 'Domain Overview'}
+          Hello, {user?.full_name?.split(' ')[0] || 'there'} 👋
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontFamily: 'Satoshi, sans-serif' }}>
-          Lead oversight · {tasks.length} active tasks
+          Lead • {myDomain?.name ?? 'Loading...'} · {tasks.length} active tasks
         </p>
       </div>
 

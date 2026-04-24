@@ -1,8 +1,9 @@
 import axios from 'axios';
 import { supabase } from './supabase';
 
+const rawBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 export const api = axios.create({
-  baseURL: `${process.env.NEXT_PUBLIC_API_URL || 'https://club-manager-production-f4cc.up.railway.app'}/v1`,
+  baseURL: rawBaseUrl.endsWith('/v1') ? rawBaseUrl : `${rawBaseUrl}/v1`,
   headers: { 'Content-Type': 'application/json' },
 });
 

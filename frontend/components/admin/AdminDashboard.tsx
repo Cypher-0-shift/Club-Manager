@@ -156,6 +156,12 @@ function DashboardLead() {
     enabled: !!domainId,
   });
 
+  const { data: myDomain } = useQuery<Domain>({
+    queryKey: ['domain', domainId],
+    queryFn: () => api.get(`/domains/${domainId}`).then(r => r.data),
+    enabled: !!domainId,
+  });
+
   const pendingMembers = members.filter(m => !m.is_approved);
   const approvedMembers = members.filter(m => m.is_approved);
 
@@ -182,7 +188,7 @@ function DashboardLead() {
           Hello, {user?.full_name?.split(' ')[0] ?? 'there'} 👋
         </h1>
         <p style={{ fontSize: '15px', color: 'var(--color-text-secondary)', fontFamily: 'Satoshi, sans-serif' }}>
-          Lead oversight · {totalTasks} active tasks
+          Lead • {myDomain?.name ?? 'Loading...'} · {totalTasks} active tasks
         </p>
       </div>
 

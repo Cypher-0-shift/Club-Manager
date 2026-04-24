@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import { hexToRgba } from '@/lib/utils';
 import { CreateTaskModal } from '@/components/tasks/CreateTaskModal';
 import { TaskModal } from '@/components/tasks/TaskModal';
+import { TaskTable } from '@/components/admin/TaskTable';
 
 interface Props {
   params: Promise<{ domainId: string }>;
@@ -172,8 +173,18 @@ export default function DomainWorkspacePage({ params }: Props) {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const isAdmin = ['president', 'vp', 'secretary'].includes(role ?? '');
-  const isLeadOfThisDomain = role === 'lead' && String(user?.domain_id) === String(domainId);
+  const isLeadOfThisDomain = role === 'lead' && String(user?.domain_id).toLowerCase() === String(domainId).toLowerCase();
+  const isMemberOfThisDomain = role === 'member' && String(user?.domain_id).toLowerCase() === String(domainId).toLowerCase();
+  
   const canManage = isAdmin || isLeadOfThisDomain;
+  const canView = isAdmin || isLeadOfThisDomain || isMemberOfThisDomain;
+
+  useEffect(() => {
+    if (hydrated && role && !canView) {
+      toast('You do not have access to this domain workspace', 'error');
+      router.push('/workspace');
+    }
+  }, [hydrated, role, canView, router, toast]);
 
   const { data: domain } = useQuery<Domain>({
     queryKey: ['domain', domainId],
@@ -333,6 +344,20 @@ export default function DomainWorkspacePage({ params }: Props) {
                 })}
               </div>
           }
+        </div>
+
+        {/* Domain Tasks Section */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h2 className="section-title">All Domain Tasks</h2>
+            <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>{tasks.length} total tasks</div>
+          </div>
+          
+          {tasksLoading ? (
+            <div className="card glass-subtle animate-pulse" style={{ height: '300px' }} />
+          ) : (
+            <TaskTable tasks={tasks} onTaskClick={setSelectedTask} />
+          )}
         </div>
 
       </div>

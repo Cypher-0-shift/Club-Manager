@@ -82,7 +82,7 @@ def initialize_permissions():
                 "tasks": {"read": True, "create": False, "update": True, "delete": False, "assign": False},
                 "submissions": {"read": True, "create": True, "update": False, "delete": False},
                 "messages": {"read": True, "create": True, "update": False, "delete": False},
-                "analytics": {"read": False},
+                "analytics": {"read": True},
                 "settings": {"read": True, "update": False}
             }
         }

@@ -62,6 +62,13 @@ export function AdminSidebar() {
     enabled: !!user,
   });
 
+  // Fetch user's domain if they have one (for non-president admins)
+  const { data: userDomain } = useQuery<Domain>({
+    queryKey: ['domain', user?.domain_id],
+    queryFn: () => api.get(`/domains/${user?.domain_id}`).then(r => r.data),
+    enabled: !!user?.domain_id && role !== 'president',
+  });
+
   const { data: activeProject } = useQuery<Project>({
     queryKey: ['project', projectId],
     queryFn: () => api.get(`/projects/${projectId}`).then(r => r.data),
@@ -148,11 +155,9 @@ export function AdminSidebar() {
           <BarChart3 size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Analytics</span>}
         </a>
 
-        {role !== 'lead' && (
-          <a href="/users" className={`nav-item ${isActive('/users') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Users" : undefined}>
-            <Users size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Users</span>}
-          </a>
-        )}
+        <a href="/users" className={`nav-item ${isActive('/users') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Directory" : undefined}>
+          <Users size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Directory</span>}
+        </a>
 
         <div style={{ padding: collapsed ? '16px 8px 8px' : '16px 16px 8px', marginTop: 'auto', textAlign: collapsed ? 'center' : 'left' }}>
            <span style={{ fontSize: '10px', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{collapsed ? '•••' : 'System'}</span>
@@ -173,8 +178,16 @@ export function AdminSidebar() {
             {!collapsed && (
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 500, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{user.full_name}</div>
-                <div style={{ fontSize: '11px', color: 'var(--color-brand)', fontWeight: 600, padding: '2px 6px', background: 'var(--color-brand-subtle)', borderRadius: '4px', display: 'inline-block', marginTop: '2px', textTransform: 'capitalize' }}>
-                  {role}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-brand)', fontWeight: 600, padding: '2px 6px', background: 'var(--color-brand-subtle)', borderRadius: '4px', textTransform: 'capitalize' }}>
+                    {role}
+                  </div>
+                  {role !== 'president' && userDomain && (
+                    <div style={{ fontSize: '10px', color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: userDomain.color_hex }} />
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{userDomain.name}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

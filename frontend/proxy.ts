@@ -14,9 +14,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 // Define protected routes and their required roles
 const ROUTE_PERMISSIONS: Record<string, string[]> = {
-  '/users': ['president', 'vp', 'secretary'],
-  '/workspace': ['president', 'vp', 'secretary', 'lead'],
-  '/analytics': ['president', 'vp', 'secretary', 'lead'],
+  '/users': ['president', 'vp', 'secretary', 'lead'],
+  '/workspace': ['president', 'vp', 'secretary', 'lead', 'member'],
+  '/analytics': ['president', 'vp', 'secretary', 'lead', 'member'],
   '/settings': ['president', 'vp', 'secretary', 'lead', 'member'],
   '/dashboard': ['president', 'vp', 'secretary', 'lead', 'member'],
   '/board': ['president', 'vp', 'secretary', 'lead', 'member'],

@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   GripVertical
 } from 'lucide-react';
+import Link from 'next/link';
 
 const EXEC_ROLES = ['president', 'vp', 'secretary'];
 const MIN_WIDTH = 220;
@@ -84,7 +85,7 @@ export function Sidebar() {
 
   const isExec = role && EXEC_ROLES.includes(role);
   const domains = rawDomains 
-    ? (isExec ? rawDomains : rawDomains.filter(d => d.id === user?.domain_id))
+    ? (isExec ? rawDomains : rawDomains.filter(d => String(d.id).toLowerCase() === String(user?.domain_id || '').toLowerCase()))
     : [];
 
   const { data: activeProject } = useQuery<Project>({
@@ -193,9 +194,9 @@ export function Sidebar() {
           </span>
         </div>
         
-        <a href="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Dashboard" : undefined}>
+        <Link href="/dashboard" className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Dashboard" : undefined}>
           <LayoutDashboard size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Dashboard</span>}
-        </a>
+        </Link>
 
         {/* Domains section */}
         <div>
@@ -209,7 +210,7 @@ export function Sidebar() {
             }}
             title={collapsed ? "Domains" : undefined}
           >
-            <a 
+            <Link 
               href="/workspace" 
               style={{ 
                 display: 'flex', 
@@ -222,7 +223,7 @@ export function Sidebar() {
               }}
             >
               <FolderKanban size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Domains</span>}
-            </a>
+            </Link>
             {!collapsed && (
               <button 
                 onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDomainsOpen(o => !o); }}
@@ -237,11 +238,11 @@ export function Sidebar() {
           {!collapsed && domainsOpen && domains && (
             <div style={{ paddingLeft: '24px', marginTop: '2px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
               {domains.map((d: Domain) => (
-                <a
+                <Link
                   key={d.id}
                   href={`/workspace/${d.id}`}
                   className={`nav-item ${isActive(`/workspace/${d.id}`) || activeDomainId === d.id ? 'active' : ''}`}
-                  style={{ padding: '6px 12px', fontSize: '12px' }}
+                  style={{ padding: '6px 12px', fontSize: '12px', textDecoration: 'none', color: 'inherit' }}
                 >
                   <span style={{
                     width: '8px', height: '8px', borderRadius: '50%',
@@ -249,19 +250,19 @@ export function Sidebar() {
                     display: 'inline-block',
                   }} />
                   <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
-                </a>
+                </Link>
               ))}
             </div>
           )}
         </div>
 
-        <a href="/board" className={`nav-item ${isBoardActive ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "My Board" : undefined}>
+        <Link href="/board" className={`nav-item ${isBoardActive ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "My Board" : undefined}>
           <KanbanSquare size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>My Board</span>}
-        </a>
+        </Link>
 
-        <a href="/analytics" className={`nav-item ${isActive('/analytics') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Analytics" : undefined}>
+        <Link href="/analytics" className={`nav-item ${isActive('/analytics') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Analytics" : undefined}>
           <BarChart3 size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Analytics</span>}
-        </a>
+        </Link>
 
         {['president', 'vp', 'secretary', 'lead'].includes(role ?? '') && (
           <>
@@ -270,9 +271,9 @@ export function Sidebar() {
                  {collapsed ? '•••' : 'Admin'}
                </span>
             </div>
-            <a href="/users" className={`nav-item ${isActive('/users') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Directory" : undefined}>
+            <Link href="/users" className={`nav-item ${isActive('/users') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Directory" : undefined}>
               <Users size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Directory</span>}
-            </a>
+            </Link>
           </>
         )}
 
@@ -282,9 +283,9 @@ export function Sidebar() {
            </span>
         </div>
 
-        <a href="/settings" className={`nav-item ${isActive('/settings') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Settings" : undefined}>
+        <Link href="/settings" className={`nav-item ${isActive('/settings') ? 'active' : ''}`} style={{ justifyContent: collapsed ? 'center' : 'flex-start' }} title={collapsed ? "Settings" : undefined}>
           <Settings size={16} /> {!collapsed && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Settings</span>}
-        </a>
+        </Link>
       </nav>
 
       {/* User section — pinned to bottom */}

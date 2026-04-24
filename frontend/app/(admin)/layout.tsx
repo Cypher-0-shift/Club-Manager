@@ -17,9 +17,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const pathname = usePathname();
   const isWorkspace = pathname.startsWith('/workspace');
-  const isAnalytics = pathname.startsWith('/analytics');
-  const isDashboard = pathname.startsWith('/dashboard');
-  const isAllowed = !!role && (ADMIN_ROLES.includes(role) || (role === 'member' && (isWorkspace || isAnalytics || isDashboard)));
+  const isSettings = pathname.startsWith('/settings');
+  const isAllowed = !!role && (ADMIN_ROLES.includes(role) || (role === 'member' && (isWorkspace || isSettings)));
 
   useEffect(() => {
     if (!hydrated) return;

@@ -8,6 +8,7 @@ import { SkeletonCard, StatCard } from '@/components/dashboard/StatCard';
 import { motion } from 'framer-motion';
 import { AlertCircle, CheckCircle2, ArrowRight } from 'lucide-react';
 import { Task, Domain, PRIORITY_COLORS } from '@/types';
+import Link from 'next/link';
 
 export function MemberDashboard() {
   const { user } = useAppStore();
@@ -23,7 +24,7 @@ export function MemberDashboard() {
     queryFn: () => api.get('/domains').then(r => r.data),
   });
 
-  const domainName = domains.find(d => d.id === user?.domain_id)?.name || 'Domain';
+  const domainName = domains.find(d => String(d.id).toLowerCase() === String(user?.domain_id || '').toLowerCase())?.name || 'Domain';
   const firstName = user?.full_name?.split(' ')[0] ?? 'there';
 
   const totalTasks = myTasks.length;
@@ -86,9 +87,9 @@ export function MemberDashboard() {
               <span style={{ fontSize: '14px', flex: 1, color: 'var(--color-critical)', fontWeight: 500 }}>
                 {overdueTasks.length} task(s) are overdue
               </span>
-              <a href="/board?filter=overdue" className="btn btn-sm" style={{ background: 'var(--color-critical)', color: 'white' }}>
+              <Link href="/board?filter=overdue" className="btn btn-sm" style={{ background: 'var(--color-critical)', color: 'white', textDecoration: 'none' }}>
                 View Tasks
-              </a>
+              </Link>
             </div>
           )}
 
@@ -96,9 +97,9 @@ export function MemberDashboard() {
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <h2 className="section-title">My Tasks Quick View</h2>
-              <a href="/board" className="btn btn-sm btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Link href="/board" className="btn btn-sm btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: '6px', textDecoration: 'none' }}>
                 View all <ArrowRight size={14} />
-              </a>
+              </Link>
             </div>
             
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>

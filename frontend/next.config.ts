@@ -34,11 +34,11 @@ const nextConfig: NextConfig = {
       style-src 'self' 'unsafe-inline' https://api.fontshare.com https://*.fontshare.com;
       img-src 'self' blob: data: https:;
       font-src 'self' https://api.fontshare.com https://*.fontshare.com;
-      connect-src 'self' http://localhost:8001 http://localhost:8000 ${process.env.NEXT_PUBLIC_SUPABASE_URL || ''} ${process.env.NEXT_PUBLIC_API_URL || ''};
+      connect-src 'self' http://localhost:8001 http://localhost:8000 https://club-manager-production-f4cc.up.railway.app:8080 ${process.env.NEXT_PUBLIC_SUPABASE_URL || ''} ${process.env.NEXT_PUBLIC_API_URL || ''};
       frame-ancestors 'none';
       base-uri 'self';
       form-action 'self';
-      upgrade-insecure-requests;
+      ${process.env.NODE_ENV === 'production' ? 'upgrade-insecure-requests;' : ''}
     `.replace(/\s{2,}/g, ' ').trim();
 
     return [{

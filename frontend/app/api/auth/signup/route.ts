@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const API_URL = process.env.API_URL; // server-only var ✅
+const API_URL = process.env.API_URL || 'http://localhost:8000'; // server-only var ✅
 
 export async function POST(request: NextRequest) {
     // Guard: env vars
@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Call FastAPI to create org + upgrade role to president
     let fastApiResponse: Response;
+    const baseApiUrl = API_URL.endsWith('/v1') ? API_URL : `${API_URL}/v1`;
     try {
-        fastApiResponse = await fetch(`${API_URL}/v1/onboarding/create-president`, {
+        fastApiResponse = await fetch(`${baseApiUrl}/onboarding/create-president`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',

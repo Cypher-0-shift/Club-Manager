@@ -105,10 +105,62 @@ export default function UsersPage() {
     enabled: hydrated && isAdmin,
   });
 
+  // Transform permissions data into matrix format for display
+  const transformPermissionsToMatrix = (perms: any[]) => {
+    if (!perms || perms.length === 0) return [];
+    
+    const actions = [
+      { key: 'users.read', label: 'View Users' },
+      { key: 'users.create', label: 'Create Users' },
+      { key: 'users.update', label: 'Update Users' },
+      { key: 'users.delete', label: 'Delete Users' },
+      { key: 'users.approve', label: 'Approve Users' },
+      { key: 'domains.read', label: 'View Domains' },
+      { key: 'domains.create', label: 'Create Domains' },
+      { key: 'domains.update', label: 'Update Domains' },
+      { key: 'domains.delete', label: 'Delete Domains' },
+      { key: 'projects.create', label: 'Create Projects' },
+      { key: 'tasks.create', label: 'Create Tasks' },
+      { key: 'tasks.assign', label: 'Assign Tasks' },
+      { key: 'analytics.read', label: 'View Analytics' },
+      { key: 'settings.update', label: 'Update Settings' },
+    ];
+
+    const roleMap: any = {};
+    perms.forEach((p: any) => {
+      roleMap[p.role] = p.permissions;
+    });
+
+    const getSymbol = (value: boolean) => value ? '✓' : '—';
+
+    return actions.map(action => {
+      const [resource, permission] = action.key.split('.');
+      const president = roleMap['president']?.[resource]?.[permission];
+      const vp = roleMap['vp']?.[resource]?.[permission];
+      const sec = roleMap['secretary']?.[resource]?.[permission];
+      const lead = roleMap['lead']?.[resource]?.[permission];
+      const member = roleMap['member']?.[resource]?.[permission];
+
+      // VP and Secretary usually have same permissions, so combine them
+      const vpSec = vp === sec ? getSymbol(vp) : (vp && sec ? '✓' : vp || sec ? '◑' : '—');
+
+      return {
+        action: action.label,
+        president: getSymbol(president),
+        vp_sec: vpSec,
+        lead: getSymbol(lead),
+        member: getSymbol(member),
+      };
+    });
+  };
+
   const [localMatrix, setLocalMatrix] = useState<any[]>([]);
 
   useEffect(() => {
-    if (matrix.length > 0) setLocalMatrix(matrix);
+    if (matrix.length > 0) {
+      const transformed = transformPermissionsToMatrix(matrix);
+      setLocalMatrix(transformed);
+    }
   }, [matrix]);
 
   // Mutations
@@ -124,6 +176,15 @@ export default function UsersPage() {
         qc.invalidateQueries({ queryKey: ['all-users'] }); 
         toast('Role updated', 'success');
         setConfirmState(s => ({ ...s, isOpen: false }));
+    },
+    onError: (e: Error) => toast(e.message, 'error'),
+  });
+
+  const domainUpdateMutation = useMutation({
+    mutationFn: ({ id, domainId }: { id: string; domainId: string | null }) => api.patch(`/users/${id}`, { domain_id: domainId === 'none' ? null : domainId }),
+    onSuccess: () => {
+        qc.invalidateQueries({ queryKey: ['all-users'] });
+        toast('Domain assignment updated', 'success');
     },
     onError: (e: Error) => toast(e.message, 'error'),
   });
@@ -368,7 +429,19 @@ export default function UsersPage() {
                               )}
                             </td>
                             <td style={{ color: 'var(--color-text-muted)', fontSize: '12px' }}>
-                              {domainMap[u.domain_id || ''] || '—'}
+                              {isPresident && isEditing ? (
+                                <select
+                                  value={u.domain_id || 'none'}
+                                  className="form-input"
+                                  style={{ padding: '4px 8px', fontSize: '12px', width: 'auto', background: '#1a1a1a', color: '#ffffff', border: '1px solid rgba(255,255,255,0.1)' }}
+                                  onChange={e => domainUpdateMutation.mutate({ id: u.id, domainId: e.target.value })}
+                                >
+                                  <option value="none" style={{ background: '#1a1a1a', color: '#ffffff' }}>No Domain</option>
+                                  {domains.map(d => <option key={d.id} value={d.id} style={{ background: '#1a1a1a', color: '#ffffff' }}>{d.name}</option>)}
+                                </select>
+                              ) : (
+                                domainMap[u.domain_id || ''] || '—'
+                              )}
                             </td>
                             <td><span style={{ background: 'rgba(255,255,255,0.04)', color: '#525252', border: '1px solid rgba(255,255,255,0.07)', fontSize: '11px', padding: '2px 8px', borderRadius: '5px' }}>Active</span></td>
                             <td style={{ color: 'var(--color-text-muted)' }}>{new Date(u.created_at).toLocaleDateString()}</td>

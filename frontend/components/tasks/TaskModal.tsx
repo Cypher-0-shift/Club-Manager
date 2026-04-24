@@ -9,6 +9,7 @@ import { useToast } from '@/components/ui/Toast';
 import { format } from 'date-fns';
 import { LEAD_AND_ABOVE } from '@/types';
 import { Loader2, Trash2, Edit3, MessageSquare, Clock, User as UserIcon, FolderOpen, AlertCircle, Paperclip } from 'lucide-react';
+import { SubmissionGate } from './SubmissionGate';
 
 interface TaskModalProps {
   task: Task;
@@ -184,6 +185,7 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   const { toast } = useToast();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
+  const [showSubmission, setShowSubmission] = useState(false);
 
   // Edit State
   const [editTitle, setEditTitle] = useState(task.title);
@@ -242,6 +244,10 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
   }
 
   function handleUpdateStatus(status: TaskStatus) {
+    if (status === 'completed' && role === 'member' && submissions.length === 0) {
+      setShowSubmission(true);
+      return;
+    }
     statusMutation.mutate(status);
   }
 
@@ -363,13 +369,13 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
                           <span className="badge" style={{ background: 'var(--color-surface-hover)' }}>{s.type}</span>
                           {format(new Date(s.created_at), 'MMM d, h:mm a')}
                         </div>
-                        {s.type === 'text' && <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px', fontStyle: 'italic' }}>"{s.content}"</div>}
+                        {s.type === 'text' && <div style={{ fontSize: '13px', color: 'var(--color-text-muted)', marginTop: '4px', fontStyle: 'italic' }}>"{s.text_content}"</div>}
                       </div>
                       {s.type === 'file' && s.file_url && (
                         <a href={s.file_url} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">View File</a>
                       )}
-                      {s.type === 'link' && s.content && (
-                        <a href={s.content} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">Open Link</a>
+                      {s.type === 'url' && s.url && (
+                        <a href={s.url} target="_blank" rel="noreferrer" className="btn btn-sm btn-secondary">Open Link</a>
                       )}
                     </div>
                   ))}
@@ -403,8 +409,8 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
               </>
             ) : (
               <>
-                {canSubmit && (
-                  <button className="btn btn-primary" onClick={onSubmit} style={{ gap: '8px' }}>
+                {(canSubmit || (isMember && task.status === 'in_progress' && user?.id === task.assignee_id)) && (
+                  <button className="btn btn-primary" onClick={() => setShowSubmission(true)} style={{ gap: '8px' }}>
                     <Paperclip size={16} /> Submit Proof
                   </button>
                 )}
@@ -456,6 +462,19 @@ export function TaskModal({ task, onClose, onSubmit }: TaskModalProps) {
           </div>
         </div>
 
+        {showSubmission && (
+          <SubmissionGate 
+            task={task} 
+            onClose={() => setShowSubmission(false)} 
+            onSuccess={() => {
+              setShowSubmission(false);
+              qc.invalidateQueries({ queryKey: ['tasks'] });
+              qc.invalidateQueries({ queryKey: ['my-tasks'] });
+              qc.invalidateQueries({ queryKey: ['submissions', task.id] });
+              onSubmit(); // Close or refresh parent
+            }}
+          />
+        )}
       </div>
 
       <style jsx>{`

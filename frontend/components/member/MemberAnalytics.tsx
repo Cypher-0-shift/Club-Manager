@@ -59,9 +59,37 @@ export function MemberAnalytics() {
   }
 
   if (!analytics) return null;
-  const isPresident = user?.role === 'president';
 
   const { total, completed, overdue, by_status, by_priority, completion_rate, submissions, is_org_wide } = analytics;
+
+  // Show empty state if member has no tasks
+  if (total === 0 && !is_org_wide) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <div>
+          <h1 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '8px' }}>Your Performance</h1>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '14px' }}>
+            Overview of your task contributions and completion metrics.
+          </p>
+        </div>
+        <div style={{ 
+          padding: '80px 40px', 
+          textAlign: 'center', 
+          background: '#171717', 
+          border: '1px solid rgba(255,255,255,0.07)', 
+          borderRadius: '12px' 
+        }}>
+          <div style={{ fontSize: '48px', marginBottom: '16px', opacity: 0.3 }}>📊</div>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px' }}>No Tasks Assigned Yet</h3>
+          <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
+            Once you're assigned tasks, your performance analytics will appear here.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const isPresident = user?.role === 'president';
 
   // Prepare chart data
   const statusData = Object.entries(by_status || {}).map(([name, value]) => ({ 
