@@ -11,9 +11,9 @@ interface DomainCardProps {
   projects: Project[];
 }
 
-export function DomainCard({ domain, tasks, projects }: DomainCardProps) {
-  const router = useRouter();
+import Link from 'next/link';
 
+export function DomainCard({ domain, tasks, projects }: DomainCardProps) {
   const domainTasks = tasks.filter(t => t.project?.domain_id === domain.id || t.project_id === projects.find(p => p.domain_id === domain.id)?.id);
   const domainProjects = projects.filter(p => p.domain_id === domain.id);
 
@@ -22,13 +22,16 @@ export function DomainCard({ domain, tasks, projects }: DomainCardProps) {
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   return (
-    <div
+    <Link
+      href={`/workspace/${domain.id}`}
       className="domain-card"
       style={{ 
+        display: 'block',
+        textDecoration: 'none',
+        color: 'inherit',
         '--domain-color': domain.color_hex || '#6366f1',
         '--domain-shadow': hexToRgba(domain.color_hex || '#6366f1', 0.2)
       } as any}
-      onClick={() => router.push(`/workspace/${domain.id}`)}
     >
       <div className="domain-name">{domain.name}</div>
       {domain.description && <div className="domain-desc">{domain.description}</div>}
@@ -53,7 +56,7 @@ export function DomainCard({ domain, tasks, projects }: DomainCardProps) {
           {pct}%
         </span>
       </div>
-    </div>
+    </Link>
   );
 }
 

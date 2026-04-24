@@ -76,11 +76,16 @@ export function Sidebar() {
     };
   }, [resize, stopResizing]);
 
-  const { data: domains } = useQuery<Domain[]>({
+  const { data: rawDomains } = useQuery<Domain[]>({
     queryKey: ['domains'],
     queryFn: () => api.get('/domains').then(r => r.data),
     enabled: !!user,
   });
+
+  const isExec = role && EXEC_ROLES.includes(role);
+  const domains = rawDomains 
+    ? (isExec ? rawDomains : rawDomains.filter(d => d.id === user?.domain_id))
+    : [];
 
   const { data: activeProject } = useQuery<Project>({
     queryKey: ['project', projectId],

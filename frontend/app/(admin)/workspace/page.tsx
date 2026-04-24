@@ -83,6 +83,13 @@ function WorkspaceContent() {
     enabled: hydrated && !!role,
   });
 
+  const { domainId: userDomainId } = useAppStore();
+  const isExec = ['president', 'vp', 'secretary'].includes(role ?? '');
+  
+  const domainsToDisplay = isExec 
+    ? domains 
+    : domains.filter(d => d.id === userDomainId);
+
   const { data: projects = [], isLoading: projectsLoading } = useQuery<Project[]>({
     queryKey: ['projects'],
     queryFn: () => api.get('/projects').then(r => r.data),
@@ -113,7 +120,9 @@ function WorkspaceContent() {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <h1 className="section-title" style={{ fontSize: '18px' }}>Workspace</h1>
-            <p className="section-subtitle">All club domains and their projects</p>
+            <p className="section-subtitle">
+              {isExec ? 'All club domains and their projects' : 'Your assigned domain and projects'}
+            </p>
           </div>
           {canManage && (
             <button className="btn btn-primary" onClick={() => setShowCreate(true)} id="new-domain-btn">
@@ -126,10 +135,10 @@ function WorkspaceContent() {
           ? <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
               {[0,1,2].map(i => <SkeletonCard key={i} />)}
             </div>
-          : domains.length > 0
-            ? <DomainCardGrid domains={domains} tasks={tasks} projects={projects} />
+          : domainsToDisplay.length > 0
+            ? <DomainCardGrid domains={domainsToDisplay} tasks={tasks} projects={projects} />
             : <div className="card" style={{ textAlign: 'center', color: 'var(--color-text-muted)', padding: '40px' }}>
-                No domains yet. {canManage ? 'Create the first one!' : 'Ask your president to create a domain.'}
+                {isExec ? 'No domains yet. Create the first one!' : 'You are not assigned to any domain yet.'}
               </div>
         }
       {showCreate && canManage && (
